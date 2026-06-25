@@ -5,8 +5,8 @@ import { fileURLToPath } from "node:url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const isDev = process.env.NODE_ENV === "development";
 
-const TRAY_ICON_PNG_BASE64 =
-  "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAKUlEQVR42mOwbvr2nxLMMHgNQAdEG0AI0NYAYsFwNmDgY4EqCWnoZSYAeWYZTjrE55oAAAAASUVORK5CYII=";
+const TRAY_ICON_PATH = path.join(__dirname, "tray-icon.png");
+const APP_ICON_PATH = path.join(__dirname, "app-icon.png");
 
 let mainWindow = null;
 let tray = null;
@@ -33,6 +33,7 @@ function createWindow() {
     height: 720,
     frame: false,
     backgroundColor: "#0f1117",
+    icon: APP_ICON_PATH,
     webPreferences: {
       preload: path.join(__dirname, "preload.cjs"),
       contextIsolation: true,
@@ -57,7 +58,7 @@ function createWindow() {
 }
 
 function createTray() {
-  const icon = nativeImage.createFromDataURL(`data:image/png;base64,${TRAY_ICON_PNG_BASE64}`);
+  const icon = nativeImage.createFromPath(TRAY_ICON_PATH);
   tray = new Tray(icon);
   tray.setToolTip("SentryGuard");
 

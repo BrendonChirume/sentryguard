@@ -1,4 +1,5 @@
 import NavIcon from "./NavIcon";
+import logoMark from "../assets/mark-192.png";
 
 const NAV_ITEMS = [
   ["dashboard", "Dashboard"],
@@ -12,9 +13,7 @@ export default function Sidebar({ page, onNavigate, connected }) {
   return (
     <aside className="w-[220px] min-w-[220px] glass border-y-0 border-l-0 rounded-none flex flex-col h-full flex-shrink-0 overflow-hidden">
       <div className="px-4 py-[18px] border-b border-white/10 flex items-center gap-2.5">
-        <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center flex-shrink-0 shadow-[0_4px_16px_rgba(59,130,246,0.45)]">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z" /></svg>
-        </div>
+        <img src={logoMark} alt="" className="w-8 h-8 flex-shrink-0 drop-shadow-[0_2px_8px_rgba(59,130,246,0.45)]" />
         <span className="text-[15px] font-bold text-slate-100 tracking-tight">SentryGuard</span>
       </div>
 

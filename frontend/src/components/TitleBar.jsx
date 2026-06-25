@@ -1,3 +1,5 @@
+import logoMark from "../assets/mark-192.png";
+
 export default function TitleBar() {
   const controls = typeof window !== "undefined" ? window.sentryguard?.windowControls : null;
 
@@ -7,9 +9,7 @@ export default function TitleBar() {
       style={{ WebkitAppRegion: "drag" }}
     >
       <div className="flex items-center gap-2 pl-3 text-[12px] font-medium text-slate-400">
-        <div className="w-4 h-4 bg-blue-500 rounded-sm flex items-center justify-center shrink-0 shadow-[0_0_10px_rgba(59,130,246,0.5)]">
-          <svg width="9" height="9" viewBox="0 0 24 24" fill="white"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z" /></svg>
-        </div>
+        <img src={logoMark} alt="" className="w-4 h-4 shrink-0" />
         SentryGuard
       </div>
 

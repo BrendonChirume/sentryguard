@@ -1,6 +1,7 @@
 import ToggleSwitch from "../components/ToggleSwitch";
 import KnownNetworks from "../components/KnownNetworks";
 import { card } from "../lib/ui";
+import logoMark from "../assets/mark-192.png";
 
 const numberFieldClass = "bg-white/[0.04] border border-white/10 rounded-lg py-1.5 px-2.5 text-[#e2e8f0] text-sm font-medium text-center outline-none font-mono focus:border-blue-400/50 focus:bg-white/[0.06] transition-colors duration-150";
 
@@ -74,6 +75,14 @@ export default function Settings({ settings, onUpdate, networkStatus }) {
         )}
 
         <KnownNetworks currentNetworkId={networkStatus?.network_id} />
+
+        <div className="flex items-center gap-3 px-1 py-3 mt-1">
+          <img src={logoMark} alt="" className="w-8 h-8 flex-shrink-0 opacity-80" />
+          <div>
+            <div className="text-[13px] font-semibold text-slate-300">SentryGuard</div>
+            <div className="text-[11px] text-slate-600">Monitor. Control. Protect your bandwidth.</div>
+          </div>
+        </div>
 
       </div>
     </div>
