@@ -1,4 +1,5 @@
 import { app, BrowserWindow, session, Tray, Menu, Notification, nativeImage, ipcMain } from "electron";
+import { spawn } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -7,10 +8,12 @@ const isDev = process.env.NODE_ENV === "development";
 
 const TRAY_ICON_PATH = path.join(__dirname, "tray-icon.png");
 const APP_ICON_PATH = path.join(__dirname, "app-icon.png");
+const BACKEND_EXE_PATH = path.join(process.resourcesPath, "backend", "sentryguard-backend.exe");
 
 let mainWindow = null;
 let tray = null;
 let isQuitting = false;
+let backendProcess = null;
 
 const CSP = isDev
   ? "default-src 'self' http://localhost:5173 ws://localhost:5173 http://127.0.0.1:8765 ws://127.0.0.1:8765; script-src 'self' 'unsafe-eval' 'unsafe-inline' http://localhost:5173; style-src 'self' 'unsafe-inline' http://localhost:5173"
@@ -25,6 +28,27 @@ function applyCsp() {
       },
     });
   });
+}
+
+function startBackend() {
+  // In dev, the developer runs `python -m app.main` from backend/ themselves.
+  // In production, the bundled exe (frozen via PyInstaller) ships alongside the app.
+  if (isDev) return;
+
+  backendProcess = spawn(BACKEND_EXE_PATH, [], {
+    env: { ...process.env, SENTRYGUARD_DATA_DIR: app.getPath("userData") },
+    windowsHide: true,
+  });
+
+  backendProcess.on("error", (err) => {
+    console.error("Failed to start SentryGuard backend:", err);
+  });
+}
+
+function stopBackend() {
+  if (!backendProcess) return;
+  backendProcess.kill();
+  backendProcess = null;
 }
 
 function createWindow() {
@@ -85,8 +109,14 @@ function createTray() {
 
 app.whenReady().then(() => {
   applyCsp();
+  startBackend();
   createWindow();
   createTray();
+});
+
+app.on("before-quit", () => {
+  isQuitting = true;
+  stopBackend();
 });
 
 ipcMain.on("notify", (_event, { title, body }) => {
