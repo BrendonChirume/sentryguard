@@ -11,6 +11,7 @@ from app.database import db
 from app.events import EventLogger
 from app.firewall import FirewallManager
 from app.monitor import NetworkMonitor
+from app.network import get_current_network
 
 monitor = NetworkMonitor()
 firewall = FirewallManager()
@@ -19,6 +20,11 @@ events = EventLogger()
 policy = BlockingPolicy(firewall, rules, events)
 
 SNAPSHOT_INTERVAL_SECONDS = 300
+NETWORK_CHECK_INTERVAL_SECONDS = 15
+
+_current_network_id: str | None = None
+_current_network_name: str | None = None
+_network_limiting_enabled = True
 
 
 async def _policy_loop() -> None:
@@ -29,7 +35,7 @@ async def _policy_loop() -> None:
             poll_interval = 2.0
 
         await asyncio.sleep(poll_interval)
-        policy.evaluate(monitor.snapshot())
+        policy.evaluate(monitor.snapshot(), _network_limiting_enabled)
 
 
 async def _snapshot_loop() -> None:
@@ -40,16 +46,31 @@ async def _snapshot_loop() -> None:
             db.log_snapshot(usage.name, usage.total_mb, now)
 
 
+async def _network_loop() -> None:
+    global _current_network_id, _current_network_name, _network_limiting_enabled
+    while True:
+        network_id, name = get_current_network()
+        if network_id != _current_network_id:
+            _current_network_id = network_id
+            _current_network_name = name
+            decision = db.get_network_decision(network_id)
+            # Default to limiting ON while a brand-new network awaits the user's decision.
+            _network_limiting_enabled = decision["limit_enabled"] if decision else True
+        await asyncio.sleep(NETWORK_CHECK_INTERVAL_SECONDS)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     monitor.start()
     policy_task = asyncio.create_task(_policy_loop())
     snapshot_task = asyncio.create_task(_snapshot_loop())
+    network_task = asyncio.create_task(_network_loop())
     try:
         yield
     finally:
         policy_task.cancel()
         snapshot_task.cancel()
+        network_task.cancel()
         monitor.stop()
 
 
@@ -78,6 +99,12 @@ class RuleRequest(BaseModel):
     start_time: str | None = None
     end_time: str | None = None
     category: str | None = None
+
+
+class NetworkDecisionRequest(BaseModel):
+    network_id: str
+    name: str
+    limit_enabled: bool
 
 
 class SettingsRequest(BaseModel):
@@ -149,6 +176,41 @@ def delete_rule(process_name: str) -> dict:
 def get_history(process_name: str | None = None, hours: float = 24.0) -> list[dict]:
     since = time.time() - hours * 3600
     return db.get_history(process_name=process_name, since=since)
+
+
+@app.get("/network/status")
+def get_network_status() -> dict:
+    decision = db.get_network_decision(_current_network_id) if _current_network_id else None
+    return {
+        "network_id": _current_network_id,
+        "name": _current_network_name,
+        "known": decision is not None,
+        "limit_enabled": _network_limiting_enabled,
+        "needs_prompt": _current_network_id is not None and decision is None,
+    }
+
+
+@app.post("/network/decision")
+def save_network_decision(req: NetworkDecisionRequest) -> dict:
+    global _network_limiting_enabled
+    db.save_network_decision(req.network_id, req.name, req.limit_enabled, time.time())
+    if req.network_id == _current_network_id:
+        _network_limiting_enabled = req.limit_enabled
+    return {"status": "ok"}
+
+
+@app.get("/network/known")
+def get_known_networks() -> list[dict]:
+    return db.get_all_networks()
+
+
+@app.delete("/network/known/{network_id}")
+def forget_network(network_id: str) -> dict:
+    global _network_limiting_enabled
+    db.delete_network(network_id)
+    if network_id == _current_network_id:
+        _network_limiting_enabled = True
+    return {"network_id": network_id, "deleted": True}
 
 
 @app.get("/settings")

@@ -67,6 +67,28 @@ export async function deleteRule(processName) {
   return res.json();
 }
 
+export async function fetchNetworkStatus() {
+  const res = await fetch(`${BASE_URL}/network/status`);
+  if (!res.ok) throw new Error(`network status failed: ${res.status}`);
+  return res.json();
+}
+
+export function saveNetworkDecision(decision) {
+  return postJson("/network/decision", decision);
+}
+
+export async function fetchKnownNetworks() {
+  const res = await fetch(`${BASE_URL}/network/known`);
+  if (!res.ok) throw new Error(`known networks failed: ${res.status}`);
+  return res.json();
+}
+
+export async function forgetNetwork(networkId) {
+  const res = await fetch(`${BASE_URL}/network/known/${encodeURIComponent(networkId)}`, { method: "DELETE" });
+  if (!res.ok) throw new Error(`forget network failed: ${res.status}`);
+  return res.json();
+}
+
 export function subscribeUsage(onUsage, onConnectionChange) {
   const ws = new WebSocket(`${WS_URL}/ws/usage`);
   ws.onopen = () => onConnectionChange?.(true);

@@ -108,3 +108,22 @@ def test_evaluate_blocks_inside_time_window():
     policy.evaluate([usage])
 
     assert "scheduled.exe" in firewall.blocked
+
+
+def test_evaluate_skips_auto_threshold_when_network_limiting_disabled():
+    policy, firewall, rules, events = make_policy(threshold_mb=10.0)
+    usage = ProcessUsage(pid=1234, name="hog.exe", bytes_sent=20 * 1024 * 1024)
+
+    policy.evaluate([usage], network_limiting_enabled=False)
+
+    assert "hog.exe" not in firewall.blocked
+
+
+def test_evaluate_still_enforces_explicit_limit_when_network_limiting_disabled():
+    policy, firewall, rules, events = make_policy(threshold_mb=500.0)
+    policy.set_limit("picky.exe", 1.0)
+    usage = ProcessUsage(pid=1234, name="picky.exe", bytes_sent=2 * 1024 * 1024)
+
+    policy.evaluate([usage], network_limiting_enabled=False)
+
+    assert "picky.exe" in firewall.blocked

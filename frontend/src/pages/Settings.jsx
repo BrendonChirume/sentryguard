@@ -1,9 +1,10 @@
 import ToggleSwitch from "../components/ToggleSwitch";
+import KnownNetworks from "../components/KnownNetworks";
 import { card } from "../lib/ui";
 
 const numberFieldClass = "bg-white/[0.04] border border-white/10 rounded-lg py-1.5 px-2.5 text-[#e2e8f0] text-sm font-medium text-center outline-none font-mono focus:border-blue-400/50 focus:bg-white/[0.06] transition-colors duration-150";
 
-export default function Settings({ settings, onUpdate }) {
+export default function Settings({ settings, onUpdate, networkStatus }) {
   return (
     <div className="max-w-[580px]">
       <div className="mb-6">
@@ -57,6 +58,22 @@ export default function Settings({ settings, onUpdate }) {
             <ToggleSwitch on={settings.startBk} onClick={() => onUpdate({ startBk: !settings.startBk })} />
           </div>
         </div>
+
+        {networkStatus?.network_id && (
+          <div className={`${card} px-5 py-4.5`}>
+            <div className="flex items-center justify-between gap-5">
+              <div>
+                <div className="text-sm font-medium text-[#e2e8f0]">Current Network</div>
+                <div className="text-xs text-slate-600 mt-0.5 font-mono truncate">{networkStatus.name}</div>
+              </div>
+              <span className={`text-[11px] font-semibold uppercase tracking-wide px-2 py-1 rounded ${networkStatus.limit_enabled ? "bg-amber-500/10 text-amber-400" : "bg-emerald-500/10 text-emerald-400"}`}>
+                {networkStatus.limit_enabled ? "Limiting On" : "Open"}
+              </span>
+            </div>
+          </div>
+        )}
+
+        <KnownNetworks currentNetworkId={networkStatus?.network_id} />
 
       </div>
     </div>

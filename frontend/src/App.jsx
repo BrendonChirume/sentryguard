@@ -11,13 +11,16 @@ import {
   fetchConnections,
   fetchHistory,
   saveRule,
-  deleteRule
+  deleteRule,
+  fetchNetworkStatus,
+  saveNetworkDecision
 } from "./api";
 import { appColor, isRuleActiveNow } from "./lib/format";
 import TitleBar from "./components/TitleBar";
 import Sidebar from "./components/Sidebar";
 import LimitModal from "./components/LimitModal";
 import ConnectionModal from "./components/ConnectionModal";
+import NetworkPromptModal from "./components/NetworkPromptModal";
 import Dashboard from "./pages/Dashboard";
 import Applications from "./pages/Applications";
 import Rules from "./pages/Rules";
@@ -40,9 +43,12 @@ export default function App() {
   const [addRuleOpen, setAddRuleOpen] = useState(false);
   const [modal, setModal] = useState(null);
   const [inspectorModal, setInspectorModal] = useState(null);
+  const [networkStatus, setNetworkStatus] = useState(null);
+  const [networkPromptOpen, setNetworkPromptOpen] = useState(false);
 
   const prevUsageRef = useRef({});
   const lastEventTsRef = useRef(null);
+  const notifiedNetworkRef = useRef(null);
 
   useEffect(() => {
     fetchSettings().then(res => {
@@ -104,6 +110,22 @@ export default function App() {
     const refresh = () => fetchHistory(24).then(setHistory).catch(console.error);
     refresh();
     const inv = setInterval(refresh, 60000);
+    return () => clearInterval(inv);
+  }, []);
+
+  useEffect(() => {
+    const refresh = () => {
+      fetchNetworkStatus().then(status => {
+        setNetworkStatus(status);
+        if (status.needs_prompt && status.network_id && notifiedNetworkRef.current !== status.network_id) {
+          notifiedNetworkRef.current = status.network_id;
+          window.sentryguard?.notify?.("SentryGuard — New network detected", `Limit data usage on "${status.name}"?`);
+          setNetworkPromptOpen(true);
+        }
+      }).catch(console.error);
+    };
+    refresh();
+    const inv = setInterval(refresh, 10000);
     return () => clearInterval(inv);
   }, []);
 
@@ -203,6 +225,14 @@ export default function App() {
     deleteRule(name).then(() => fetchRules().then(setRules)).catch(console.error);
   };
 
+  const handleNetworkDecision = (limitEnabled) => {
+    if (!networkStatus?.network_id) return;
+    saveNetworkDecision({ network_id: networkStatus.network_id, name: networkStatus.name, limit_enabled: limitEnabled })
+      .then(() => fetchNetworkStatus().then(setNetworkStatus))
+      .catch(console.error);
+    setNetworkPromptOpen(false);
+  };
+
   return (
     <div className="flex flex-col w-screen h-screen text-[#e2e8f0] font-sans leading-relaxed overflow-hidden">
       <TitleBar />
@@ -254,13 +284,19 @@ export default function App() {
               />
             )}
             {page === "events" && <Events events={events} />}
-            {page === "settings" && <Settings settings={settings} onUpdate={updateSettings} />}
+            {page === "settings" && <Settings settings={settings} onUpdate={updateSettings} networkStatus={networkStatus} />}
           </div>
         </div>
       </div>
 
       <LimitModal isOpen={modal !== null} appName={modal?.appName} currentLimit={modal?.limit} onClose={() => setModal(null)} onSave={handleSaveLimit} />
       <ConnectionModal isOpen={inspectorModal !== null} appName={inspectorModal?.appName} connections={inspectorModal?.connections} onClose={() => setInspectorModal(null)} />
+      <NetworkPromptModal
+        isOpen={networkPromptOpen}
+        networkName={networkStatus?.name}
+        onDecide={handleNetworkDecision}
+        onDismiss={() => setNetworkPromptOpen(false)}
+      />
     </div>
   );
 }

@@ -62,6 +62,16 @@ class Database:
             )
         """)
 
+        # Remembered network decisions (limit-on-connect or keep open)
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS networks (
+                network_id TEXT PRIMARY KEY,
+                name TEXT,
+                limit_enabled INTEGER,
+                decided_at REAL
+            )
+        """)
+
         for ddl in (
             "ALTER TABLE rules ADD COLUMN start_time TEXT",
             "ALTER TABLE rules ADD COLUMN end_time TEXT",
@@ -163,6 +173,50 @@ class Database:
             {"process_name": row["process_name"], "total_mb": row["total_mb"], "timestamp": row["timestamp"]}
             for row in c.fetchall()
         ]
+
+    # -- Networks --
+    def get_network_decision(self, network_id: str) -> dict | None:
+        c = self.conn.cursor()
+        c.execute("SELECT * FROM networks WHERE network_id = ?", (network_id,))
+        row = c.fetchone()
+        if row is None:
+            return None
+        return {
+            "network_id": row["network_id"],
+            "name": row["name"],
+            "limit_enabled": bool(row["limit_enabled"]),
+            "decided_at": row["decided_at"],
+        }
+
+    def save_network_decision(self, network_id: str, name: str, limit_enabled: bool, decided_at: float):
+        c = self.conn.cursor()
+        c.execute("""
+            INSERT INTO networks (network_id, name, limit_enabled, decided_at)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(network_id) DO UPDATE SET
+                name=excluded.name,
+                limit_enabled=excluded.limit_enabled,
+                decided_at=excluded.decided_at
+        """, (network_id, name, int(limit_enabled), decided_at))
+        self.conn.commit()
+
+    def get_all_networks(self) -> list[dict]:
+        c = self.conn.cursor()
+        c.execute("SELECT * FROM networks ORDER BY decided_at DESC")
+        return [
+            {
+                "network_id": row["network_id"],
+                "name": row["name"],
+                "limit_enabled": bool(row["limit_enabled"]),
+                "decided_at": row["decided_at"],
+            }
+            for row in c.fetchall()
+        ]
+
+    def delete_network(self, network_id: str):
+        c = self.conn.cursor()
+        c.execute("DELETE FROM networks WHERE network_id = ?", (network_id,))
+        self.conn.commit()
 
     # -- Settings --
     def get_setting(self, key: str) -> str | None:

@@ -44,7 +44,10 @@ class BlockingPolicy:
         self._rules = rules
         self._events = events
 
-    def evaluate(self, usages: list[ProcessUsage]) -> None:
+    def evaluate(self, usages: list[ProcessUsage], network_limiting_enabled: bool = True) -> None:
+        """Applies manual rules (always) and the global auto-block threshold
+        (only when network_limiting_enabled — e.g. the user opted out of
+        standard limiting for the currently connected network)."""
         try:
             auto_block_threshold_mb = float(db.get_setting("auto_thresh") or 500.0)
         except ValueError:
@@ -57,7 +60,13 @@ class BlockingPolicy:
             if not self._in_window(rule):
                 continue
 
-            limit = rule.limit_mb if rule.limit_mb is not None else auto_block_threshold_mb
+            if rule.limit_mb is not None:
+                limit = rule.limit_mb
+            elif network_limiting_enabled:
+                limit = auto_block_threshold_mb
+            else:
+                continue  # no explicit rule, and standard limiting is off for this network
+
             if usage.total_mb >= limit:
                 self.block(usage.name, usage.pid, auto=True, detail=f"{usage.total_mb:.1f} MB >= {limit} MB")
 
