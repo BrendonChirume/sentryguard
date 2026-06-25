@@ -61,6 +61,10 @@ export function saveRule(rule) {
   return postJson("/rules", rule);
 }
 
+export function unthrottleProcess(processName) {
+  return postJson("/unthrottle", { process_name: processName });
+}
+
 export async function deleteRule(processName) {
   const res = await fetch(`${BASE_URL}/rules/${encodeURIComponent(processName)}`, { method: "DELETE" });
   if (!res.ok) throw new Error(`delete rule failed: ${res.status}`);

@@ -15,7 +15,19 @@ class FakeFirewall:
         self.unblocked.append(rule_name)
 
 
-ALL_TEST_PROCESS_NAMES = ["hog.exe", "quiet.exe", "picky.exe", "app.exe", "scheduled.exe"]
+class FakeThrottle:
+    def __init__(self):
+        self.throttled = []
+        self.unthrottled = []
+
+    def throttle(self, process_path, rule_name, kbps):
+        self.throttled.append((rule_name, kbps))
+
+    def unthrottle(self, rule_name):
+        self.unthrottled.append(rule_name)
+
+
+ALL_TEST_PROCESS_NAMES = ["hog.exe", "quiet.exe", "picky.exe", "app.exe", "scheduled.exe", "streamer.exe"]
 
 
 def make_policy(threshold_mb=500.0):
@@ -28,14 +40,15 @@ def make_policy(threshold_mb=500.0):
 
     db.set_setting("auto_thresh", str(threshold_mb))
     firewall = FakeFirewall()
+    throttle = FakeThrottle()
     rules = RuleStore()
     events = EventLogger()
-    policy = BlockingPolicy(firewall, rules, events)
-    return policy, firewall, rules, events
+    policy = BlockingPolicy(firewall, rules, events, throttle)
+    return policy, firewall, rules, events, throttle
 
 
 def test_evaluate_blocks_over_threshold():
-    policy, firewall, rules, events = make_policy(threshold_mb=10.0)
+    policy, firewall, rules, events, throttle = make_policy(threshold_mb=10.0)
     usage = ProcessUsage(pid=1234, name="hog.exe", bytes_sent=20 * 1024 * 1024)
 
     policy.evaluate([usage])
@@ -46,7 +59,7 @@ def test_evaluate_blocks_over_threshold():
 
 
 def test_evaluate_skips_under_threshold():
-    policy, firewall, rules, events = make_policy(threshold_mb=500.0)
+    policy, firewall, rules, events, throttle = make_policy(threshold_mb=500.0)
     usage = ProcessUsage(pid=1234, name="quiet.exe", bytes_sent=1024)
 
     policy.evaluate([usage])
@@ -55,7 +68,7 @@ def test_evaluate_skips_under_threshold():
 
 
 def test_evaluate_respects_per_process_limit():
-    policy, firewall, rules, events = make_policy(threshold_mb=500.0)
+    policy, firewall, rules, events, throttle = make_policy(threshold_mb=500.0)
     policy.set_limit("picky.exe", 1.0)
     usage = ProcessUsage(pid=1234, name="picky.exe", bytes_sent=2 * 1024 * 1024)
 
@@ -65,7 +78,7 @@ def test_evaluate_respects_per_process_limit():
 
 
 def test_unblock_clears_rule():
-    policy, firewall, rules, events = make_policy()
+    policy, firewall, rules, events, throttle = make_policy()
     policy.block("app.exe", pid=None)
     assert rules.get("app.exe").blocked is True
 
@@ -76,7 +89,7 @@ def test_unblock_clears_rule():
 
 
 def test_evaluate_skips_rule_outside_time_window():
-    policy, firewall, rules, events = make_policy(threshold_mb=500.0)
+    policy, firewall, rules, events, throttle = make_policy(threshold_mb=500.0)
     import datetime
 
     # A 1-minute window 12 hours from now, guaranteed not to contain the current time.
@@ -94,7 +107,7 @@ def test_evaluate_skips_rule_outside_time_window():
 
 
 def test_evaluate_blocks_inside_time_window():
-    policy, firewall, rules, events = make_policy(threshold_mb=500.0)
+    policy, firewall, rules, events, throttle = make_policy(threshold_mb=500.0)
     import datetime
 
     now = datetime.datetime.now()
@@ -111,7 +124,7 @@ def test_evaluate_blocks_inside_time_window():
 
 
 def test_evaluate_skips_auto_threshold_when_network_limiting_disabled():
-    policy, firewall, rules, events = make_policy(threshold_mb=10.0)
+    policy, firewall, rules, events, throttle = make_policy(threshold_mb=10.0)
     usage = ProcessUsage(pid=1234, name="hog.exe", bytes_sent=20 * 1024 * 1024)
 
     policy.evaluate([usage], network_limiting_enabled=False)
@@ -120,10 +133,47 @@ def test_evaluate_skips_auto_threshold_when_network_limiting_disabled():
 
 
 def test_evaluate_still_enforces_explicit_limit_when_network_limiting_disabled():
-    policy, firewall, rules, events = make_policy(threshold_mb=500.0)
+    policy, firewall, rules, events, throttle = make_policy(threshold_mb=500.0)
     policy.set_limit("picky.exe", 1.0)
     usage = ProcessUsage(pid=1234, name="picky.exe", bytes_sent=2 * 1024 * 1024)
 
     policy.evaluate([usage], network_limiting_enabled=False)
 
     assert "picky.exe" in firewall.blocked
+
+
+def test_evaluate_throttles_instead_of_blocking_when_throttle_configured():
+    policy, firewall, rules, events, throttle = make_policy(threshold_mb=500.0)
+    policy.set_rule("streamer.exe", limit_mb=1.0, start_time=None, end_time=None, category=None, throttle_kbps=100.0)
+    usage = ProcessUsage(pid=1234, name="streamer.exe", bytes_sent=2 * 1024 * 1024)
+
+    policy.evaluate([usage])
+
+    assert ("streamer.exe", 100.0) in throttle.throttled
+    assert "streamer.exe" not in firewall.blocked
+    assert rules.get("streamer.exe").throttled is True
+    assert events.read_all()[0]["action"] == "throttle"
+
+
+def test_evaluate_does_not_rethrottle_already_throttled_process():
+    policy, firewall, rules, events, throttle = make_policy(threshold_mb=500.0)
+    policy.set_rule("streamer.exe", limit_mb=1.0, start_time=None, end_time=None, category=None, throttle_kbps=100.0)
+    usage = ProcessUsage(pid=1234, name="streamer.exe", bytes_sent=2 * 1024 * 1024)
+
+    policy.evaluate([usage])
+    policy.evaluate([usage])
+
+    assert len(throttle.throttled) == 1
+
+
+def test_unthrottle_process_clears_throttled_flag():
+    policy, firewall, rules, events, throttle = make_policy(threshold_mb=500.0)
+    policy.set_rule("streamer.exe", limit_mb=1.0, start_time=None, end_time=None, category=None, throttle_kbps=100.0)
+    usage = ProcessUsage(pid=1234, name="streamer.exe", bytes_sent=2 * 1024 * 1024)
+    policy.evaluate([usage])
+    assert rules.get("streamer.exe").throttled is True
+
+    policy.unthrottle_process("streamer.exe")
+
+    assert rules.get("streamer.exe").throttled is False
+    assert "streamer.exe" in throttle.unthrottled

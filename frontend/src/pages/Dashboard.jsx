@@ -45,15 +45,15 @@ export default function Dashboard({ apps, top5, totalUsedMb, totalRate, blkCnt, 
 
       <div className={`${card} p-4.5 mb-5`}>
         <div className={`${sectionLabel} mb-3.5`}>Data Usage — Top 5 Apps</div>
-        <div className="flex h-[22px] rounded-[5px] overflow-hidden bg-black/25 mb-3 gap-px">
+        <div className="flex h-5.5 rounded-[5px] overflow-hidden bg-black/25 mb-3 gap-px">
           {top5.map((t, i) => (
-            <div key={i} title={t.name} className="h-full transition-[width] duration-500 ease-out min-w-[3px] flex-shrink-0" style={{ width: `${t.percent.toFixed(2)}%`, background: t.color }} />
+            <div key={i} title={t.name} className="h-full transition-[width] duration-500 ease-out min-w-0.75 shrink-0" style={{ width: `${t.percent.toFixed(2)}%`, background: t.color }} />
           ))}
         </div>
         <div className="flex flex-wrap gap-4">
           {top5.map((t, i) => (
             <div key={i} className="flex items-center gap-1.5">
-              <div className="w-[9px] h-[9px] rounded-full flex-shrink-0" style={{ background: t.color }} />
+              <div className="w-2.25 h-2.25 rounded-full shrink-0" style={{ background: t.color }} />
               <span className="text-xs text-slate-400">{t.name}</span>
               <span className="font-mono text-xs text-slate-600">{formatBytes(t.total_mb)}</span>
             </div>

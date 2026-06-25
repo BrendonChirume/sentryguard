@@ -8,6 +8,8 @@ class ActionType(str, Enum):
     UNBLOCK = "unblock"
     LIMIT = "limit"
     AUTO_BLOCK = "auto_block"
+    THROTTLE = "throttle"
+    UNTHROTTLE = "unthrottle"
 
 
 @dataclass
@@ -34,6 +36,8 @@ class BlockRule:
     start_time: str | None = None  # "HH:MM", 24h
     end_time: str | None = None  # "HH:MM", 24h
     category: str | None = None
+    throttle_kbps: float | None = None  # speed cap to apply once limit_mb is hit, instead of blocking
+    throttled: bool = False  # whether the throttle is currently in effect
 
 
 @dataclass

@@ -1,4 +1,4 @@
-import { isRuleActiveNow, statusBadgeClass } from "../lib/format";
+import { ruleStatus, statusBadgeClass } from "../lib/format";
 import { card, sectionLabel, inputStyle, label, btnPrimary, btnGhost, btnDanger } from "../lib/ui";
 
 export default function Rules({ rules, newRule, onNewRuleChange, addRuleOpen, onToggleAddRule, onAddRule, onDeleteRule }) {
@@ -28,25 +28,36 @@ export default function Rules({ rules, newRule, onNewRuleChange, addRuleOpen, on
               </select>
             </div>
             <div>
-              <label className={label}>Limit (MB)</label>
+              <label className={label}>Data Limit (MB)</label>
               <input type="number" disabled={newRule.type !== "limit"} value={newRule.limit} onChange={(e) => onNewRuleChange({ ...newRule, limit: e.target.value })} placeholder="100" className={inputStyle} />
             </div>
           </div>
           {newRule.type === "limit" && (
-            <div className="grid grid-cols-[140px_140px_1fr] gap-3 mb-3.5">
-              <div>
-                <label className={label}>Start Time</label>
-                <input type="time" value={newRule.startTime} onChange={(e) => onNewRuleChange({ ...newRule, startTime: e.target.value })} className={inputStyle} />
+            <>
+              <div className="grid grid-cols-[140px_1fr] gap-3 mb-3.5">
+                <div>
+                  <label className={label}>Throttle Speed (KB/s)</label>
+                  <input type="number" value={newRule.throttleKbps} onChange={(e) => onNewRuleChange({ ...newRule, throttleKbps: e.target.value })} placeholder="optional" className={inputStyle} />
+                </div>
+                <div className="flex items-end pb-2.5 text-[11px] text-slate-600">
+                  Once the data limit is hit, speed is capped instead of blocking outright. Leave blank to block.
+                </div>
               </div>
-              <div>
-                <label className={label}>End Time</label>
-                <input type="time" value={newRule.endTime} onChange={(e) => onNewRuleChange({ ...newRule, endTime: e.target.value })} className={inputStyle} />
+              <div className="grid grid-cols-[140px_140px_1fr] gap-3 mb-3.5">
+                <div>
+                  <label className={label}>Start Time</label>
+                  <input type="time" value={newRule.startTime} onChange={(e) => onNewRuleChange({ ...newRule, startTime: e.target.value })} className={inputStyle} />
+                </div>
+                <div>
+                  <label className={label}>End Time</label>
+                  <input type="time" value={newRule.endTime} onChange={(e) => onNewRuleChange({ ...newRule, endTime: e.target.value })} className={inputStyle} />
+                </div>
+                <div>
+                  <label className={label}>Category</label>
+                  <input type="text" value={newRule.category} onChange={(e) => onNewRuleChange({ ...newRule, category: e.target.value })} placeholder="e.g. gaming" className={inputStyle} />
+                </div>
               </div>
-              <div>
-                <label className={label}>Category</label>
-                <input type="text" value={newRule.category} onChange={(e) => onNewRuleChange({ ...newRule, category: e.target.value })} placeholder="e.g. gaming" className={inputStyle} />
-              </div>
-            </div>
+            </>
           )}
           <div className="flex gap-2">
             <button type="button" className={btnPrimary} onClick={onAddRule}>Save Rule</button>
@@ -57,14 +68,14 @@ export default function Rules({ rules, newRule, onNewRuleChange, addRuleOpen, on
 
       <div className="flex flex-col gap-2">
         {rules.map((r) => {
-          const ruleStatus = r.blocked ? "blocked" : r.limit_mb != null ? (isRuleActiveNow(r) ? "limited" : "scheduled") : "active";
+          const status = ruleStatus(r);
           return (
             <div key={r.process_name} className={`${card} px-5 py-4 flex items-center gap-3.5`}>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap mb-1">
                   <span className="font-mono text-[13px] font-medium text-[#e2e8f0]">{r.process_name}</span>
-                  <span className={`px-1.5 py-0.5 rounded text-[11px] font-semibold tracking-wide uppercase inline-block ${statusBadgeClass(ruleStatus)}`}>
-                    {r.blocked ? "block" : ruleStatus === "scheduled" ? "scheduled limit" : "limit"}
+                  <span className={`px-1.5 py-0.5 rounded text-[11px] font-semibold tracking-wide uppercase inline-block ${statusBadgeClass(status)}`}>
+                    {r.blocked ? "block" : status === "throttled" ? "throttled" : status === "scheduled" ? "scheduled limit" : "limit"}
                   </span>
                   {r.category && (
                     <span className="px-1.5 py-0.5 rounded text-[11px] font-semibold tracking-wide uppercase bg-violet-500/10 text-violet-400">{r.category}</span>
@@ -72,7 +83,8 @@ export default function Rules({ rules, newRule, onNewRuleChange, addRuleOpen, on
                 </div>
                 {r.limit_mb != null && (
                   <span className="text-xs text-slate-700">
-                    Throttled at {r.limit_mb} MB / day{r.start_time && r.end_time ? ` · active ${r.start_time}–${r.end_time}` : ""}
+                    {r.throttle_kbps != null ? `Throttles to ${r.throttle_kbps} KB/s` : "Blocks"} at {r.limit_mb} MB / day
+                    {r.start_time && r.end_time ? ` · active ${r.start_time}–${r.end_time}` : ""}
                   </span>
                 )}
               </div>

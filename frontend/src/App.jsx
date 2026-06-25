@@ -12,10 +12,11 @@ import {
   fetchHistory,
   saveRule,
   deleteRule,
+  unthrottleProcess,
   fetchNetworkStatus,
   saveNetworkDecision
 } from "./api";
-import { appColor, isRuleActiveNow } from "./lib/format";
+import { appColor, ruleStatus } from "./lib/format";
 import TitleBar from "./components/TitleBar";
 import Sidebar from "./components/Sidebar";
 import LimitModal from "./components/LimitModal";
@@ -40,7 +41,7 @@ export default function App() {
   const [appFilter, setAppFilter] = useState("all");
   const [settings, setSettings] = useState({ poll: 2, autoThresh: 500, startWin: false, startBk: true });
 
-  const [newRule, setNewRule] = useState({ name: "", type: "block", limit: 1000, startTime: "", endTime: "", category: "" });
+  const [newRule, setNewRule] = useState({ name: "", type: "block", limit: 1000, startTime: "", endTime: "", category: "", throttleKbps: "" });
   const [addRuleOpen, setAddRuleOpen] = useState(false);
   const [modal, setModal] = useState(null);
   const [inspectorModal, setInspectorModal] = useState(null);
@@ -139,15 +140,7 @@ export default function App() {
   }, [rules]);
 
   const appsWithStatus = useMemo(() => {
-    return apps.map(app => {
-      const rule = rulesMap.get(app.name);
-      let status = "active";
-      if (rule) {
-        if (rule.blocked) status = "blocked";
-        else if (rule.limit_mb != null) status = isRuleActiveNow(rule) ? "limited" : "scheduled";
-      }
-      return { ...app, status };
-    });
+    return apps.map(app => ({ ...app, status: ruleStatus(rulesMap.get(app.name)) }));
   }, [apps, rulesMap]);
 
   useEffect(() => {
@@ -169,7 +162,7 @@ export default function App() {
   const totalUsedMb = useMemo(() => apps.reduce((s, a) => s + a.total_mb, 0), [apps]);
   const totalRate = useMemo(() => apps.reduce((s, a) => s + (a.speed || 0), 0), [apps]);
   const blkCnt = useMemo(() => appsWithStatus.filter(a => a.status === "blocked").length, [appsWithStatus]);
-  const limCnt = useMemo(() => appsWithStatus.filter(a => a.status === "limited").length, [appsWithStatus]);
+  const limCnt = useMemo(() => appsWithStatus.filter(a => a.status === "limited" || a.status === "throttled").length, [appsWithStatus]);
 
   const top5 = useMemo(() => {
     const sorted = [...apps].sort((a, b) => b.total_mb - a.total_mb).slice(0, 5);
@@ -191,16 +184,26 @@ export default function App() {
       blockProcess(app.name).then(() => fetchRules().then(setRules));
     } else if (action === "unblock") {
       unblockProcess(app.name).then(() => fetchRules().then(setRules));
+    } else if (action === "unthrottle") {
+      unthrottleProcess(app.name).then(() => fetchRules().then(setRules));
     } else if (action === "limit") {
       const rule = rulesMap.get(app.name);
-      setModal({ appName: app.name, limit: rule?.limit_mb || null });
+      setModal({ appName: app.name, limit: rule?.limit_mb ?? null, throttleKbps: rule?.throttle_kbps ?? null });
     } else if (action === "inspect") {
       fetchConnections(app.name).then(res => setInspectorModal({ appName: app.name, connections: res })).catch(console.error);
     }
   };
 
-  const handleSaveLimit = (name, val) => {
-    setLimit(name, val).then(() => fetchRules().then(setRules));
+  const handleSaveLimit = (name, { limitMb, throttleKbps }) => {
+    const rule = rulesMap.get(name);
+    saveRule({
+      process_name: name,
+      limit_mb: limitMb,
+      start_time: rule?.start_time ?? null,
+      end_time: rule?.end_time ?? null,
+      category: rule?.category ?? null,
+      throttle_kbps: throttleKbps,
+    }).then(() => fetchRules().then(setRules));
   };
 
   const handleSaveSettings = (next) => {
@@ -223,7 +226,7 @@ export default function App() {
   const addRule = () => {
     if (!newRule.name.trim()) return;
     const finish = () => {
-      setNewRule({ name: "", type: "block", limit: 1000, startTime: "", endTime: "", category: "" });
+      setNewRule({ name: "", type: "block", limit: 1000, startTime: "", endTime: "", category: "", throttleKbps: "" });
       setAddRuleOpen(false);
       fetchRules().then(setRules);
     };
@@ -236,6 +239,7 @@ export default function App() {
         start_time: newRule.startTime || null,
         end_time: newRule.endTime || null,
         category: newRule.category || null,
+        throttle_kbps: newRule.throttleKbps ? Number(newRule.throttleKbps) : null,
       }).then(finish);
     }
   };
@@ -319,7 +323,7 @@ export default function App() {
         </div>
       </div>
 
-      <LimitModal isOpen={modal !== null} appName={modal?.appName} currentLimit={modal?.limit} onClose={() => setModal(null)} onSave={handleSaveLimit} />
+      <LimitModal isOpen={modal !== null} appName={modal?.appName} currentLimit={modal?.limit} currentThrottle={modal?.throttleKbps} onClose={() => setModal(null)} onSave={handleSaveLimit} />
       <ConnectionModal isOpen={inspectorModal !== null} appName={inspectorModal?.appName} connections={inspectorModal?.connections} onClose={() => setInspectorModal(null)} />
       <NetworkPromptModal
         isOpen={networkPromptOpen}

@@ -17,7 +17,7 @@ def make_client(monkeypatch, tmp_path):
     monkeypatch.setattr(api, "events", api.EventLogger())
     monkeypatch.setattr(
         api, "policy",
-        api.BlockingPolicy(api.firewall, api.rules, api.events),
+        api.BlockingPolicy(api.firewall, api.rules, api.events, api.throttle),
     )
     monkeypatch.setattr(api.monitor, "start", lambda: None)
     monkeypatch.setattr(api.monitor, "stop", lambda: None)

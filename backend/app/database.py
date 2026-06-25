@@ -76,6 +76,8 @@ class Database:
             "ALTER TABLE rules ADD COLUMN start_time TEXT",
             "ALTER TABLE rules ADD COLUMN end_time TEXT",
             "ALTER TABLE rules ADD COLUMN category TEXT",
+            "ALTER TABLE rules ADD COLUMN throttle_kbps REAL",
+            "ALTER TABLE rules ADD COLUMN throttled INTEGER DEFAULT 0",
         ):
             try:
                 c.execute(ddl)
@@ -104,21 +106,28 @@ class Database:
                 start_time=row["start_time"],
                 end_time=row["end_time"],
                 category=row["category"],
+                throttle_kbps=row["throttle_kbps"],
+                throttled=bool(row["throttled"]),
             ))
         return rules
 
     def save_rule(self, rule: BlockRule):
         c = self.conn.cursor()
         c.execute("""
-            INSERT INTO rules (process_name, limit_mb, blocked, start_time, end_time, category)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO rules (process_name, limit_mb, blocked, start_time, end_time, category, throttle_kbps, throttled)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(process_name) DO UPDATE SET
                 limit_mb=excluded.limit_mb,
                 blocked=excluded.blocked,
                 start_time=excluded.start_time,
                 end_time=excluded.end_time,
-                category=excluded.category
-        """, (rule.process_name, rule.limit_mb, int(rule.blocked), rule.start_time, rule.end_time, rule.category))
+                category=excluded.category,
+                throttle_kbps=excluded.throttle_kbps,
+                throttled=excluded.throttled
+        """, (
+            rule.process_name, rule.limit_mb, int(rule.blocked), rule.start_time, rule.end_time,
+            rule.category, rule.throttle_kbps, int(rule.throttled),
+        ))
         self.conn.commit()
 
     def delete_rule(self, process_name: str):

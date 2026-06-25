@@ -12,12 +12,14 @@ from app.events import EventLogger
 from app.firewall import FirewallManager
 from app.monitor import NetworkMonitor
 from app.network import get_current_network
+from app.throttle import ThrottleManager
 
 monitor = NetworkMonitor()
 firewall = FirewallManager()
+throttle = ThrottleManager()
 rules = RuleStore()
 events = EventLogger()
-policy = BlockingPolicy(firewall, rules, events)
+policy = BlockingPolicy(firewall, rules, events, throttle)
 
 SNAPSHOT_INTERVAL_SECONDS = 300
 NETWORK_CHECK_INTERVAL_SECONDS = 15
@@ -99,6 +101,7 @@ class RuleRequest(BaseModel):
     start_time: str | None = None
     end_time: str | None = None
     category: str | None = None
+    throttle_kbps: float | None = None
 
 
 class NetworkDecisionRequest(BaseModel):
@@ -162,7 +165,7 @@ def set_limit(req: LimitRequest) -> dict:
 
 @app.post("/rules")
 def upsert_rule(req: RuleRequest) -> dict:
-    policy.set_rule(req.process_name, req.limit_mb, req.start_time, req.end_time, req.category)
+    policy.set_rule(req.process_name, req.limit_mb, req.start_time, req.end_time, req.category, req.throttle_kbps)
     return {"process_name": req.process_name}
 
 
@@ -170,6 +173,12 @@ def upsert_rule(req: RuleRequest) -> dict:
 def delete_rule(process_name: str) -> dict:
     policy.delete_rule(process_name)
     return {"process_name": process_name, "deleted": True}
+
+
+@app.post("/unthrottle")
+def unthrottle_process(req: BlockRequest) -> dict:
+    policy.unthrottle_process(req.process_name)
+    return {"process_name": req.process_name, "throttled": False}
 
 
 @app.get("/history")

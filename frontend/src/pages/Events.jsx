@@ -5,6 +5,8 @@ const ACTION_COLOR = {
   auto_block: { bg: "bg-red-500/10", text: "text-red-500" },
   limit: { bg: "bg-amber-500/10", text: "text-amber-500" },
   unblock: { bg: "bg-emerald-500/10", text: "text-emerald-500" },
+  throttle: { bg: "bg-cyan-500/10", text: "text-cyan-400" },
+  unthrottle: { bg: "bg-emerald-500/10", text: "text-emerald-500" },
 };
 
 export default function Events({ events }) {

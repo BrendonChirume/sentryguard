@@ -18,7 +18,7 @@ export default function TitleBar() {
           type="button"
           aria-label="Minimize"
           onClick={() => controls?.minimize()}
-          className="w-11 h-full flex items-center justify-center text-slate-500 hover:bg-white/[0.08] hover:text-slate-200 cursor-pointer border-none bg-transparent transition-colors duration-150"
+          className="w-11 h-full flex items-center justify-center text-slate-500 hover:bg-white/8 hover:text-slate-200 cursor-pointer border-none bg-transparent transition-colors duration-150"
         >
           <svg width="10" height="10" viewBox="0 0 10 10"><rect y="4.5" width="10" height="1" fill="currentColor" /></svg>
         </button>
@@ -26,7 +26,7 @@ export default function TitleBar() {
           type="button"
           aria-label="Maximize"
           onClick={() => controls?.maximize()}
-          className="w-11 h-full flex items-center justify-center text-slate-500 hover:bg-white/[0.08] hover:text-slate-200 cursor-pointer border-none bg-transparent transition-colors duration-150"
+          className="w-11 h-full flex items-center justify-center text-slate-500 hover:bg-white/8 hover:text-slate-200 cursor-pointer border-none bg-transparent transition-colors duration-150"
         >
           <svg width="10" height="10" viewBox="0 0 10 10"><rect x="0.5" y="0.5" width="9" height="9" fill="none" stroke="currentColor" /></svg>
         </button>

@@ -26,14 +26,23 @@ export function isRuleActiveNow(rule) {
   return now >= rule.start_time || now <= rule.end_time; // window spans midnight
 }
 
-export const STATUS_COLOR = { blocked: "#ef4444", limited: "#f59e0b", scheduled: "#8b5cf6", active: "#22c55e" };
+export const STATUS_COLOR = { blocked: "#ef4444", throttled: "#06b6d4", limited: "#f59e0b", scheduled: "#8b5cf6", active: "#22c55e" };
 
 export function statusBadgeClass(status) {
   const map = {
     blocked: "bg-red-500/10 text-red-500",
+    throttled: "bg-cyan-500/10 text-cyan-400",
     limited: "bg-amber-500/10 text-amber-500",
     scheduled: "bg-violet-500/10 text-violet-500",
     active: "bg-emerald-500/10 text-emerald-500",
   };
   return map[status] || map.active;
+}
+
+export function ruleStatus(rule) {
+  if (!rule) return "active";
+  if (rule.blocked) return "blocked";
+  if (rule.throttled) return "throttled";
+  if (rule.limit_mb != null) return isRuleActiveNow(rule) ? "limited" : "scheduled";
+  return "active";
 }
