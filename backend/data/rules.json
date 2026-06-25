@@ -1,0 +1,112 @@
+{
+  "electron.exe": {
+    "process_name": "electron.exe",
+    "limit_mb": null,
+    "blocked": false
+  },
+  "chrome.exe": {
+    "process_name": "chrome.exe",
+    "limit_mb": null,
+    "blocked": false
+  },
+  "python3.13.exe": {
+    "process_name": "python3.13.exe",
+    "limit_mb": null,
+    "blocked": false
+  },
+  "CrossDeviceService.exe": {
+    "process_name": "CrossDeviceService.exe",
+    "limit_mb": null,
+    "blocked": false
+  },
+  "Code.exe": {
+    "process_name": "Code.exe",
+    "limit_mb": null,
+    "blocked": true
+  },
+  "claude.exe": {
+    "process_name": "claude.exe",
+    "limit_mb": null,
+    "blocked": false
+  },
+  "explorer.exe": {
+    "process_name": "explorer.exe",
+    "limit_mb": null,
+    "blocked": false
+  },
+  "PhoneExperienceHost.exe": {
+    "process_name": "PhoneExperienceHost.exe",
+    "limit_mb": null,
+    "blocked": false
+  },
+  "Microsoft.Notes.exe": {
+    "process_name": "Microsoft.Notes.exe",
+    "limit_mb": null,
+    "blocked": false
+  },
+  "svchost.exe": {
+    "process_name": "svchost.exe",
+    "limit_mb": null,
+    "blocked": false
+  },
+  "msedge.exe": {
+    "process_name": "msedge.exe",
+    "limit_mb": null,
+    "blocked": false
+  },
+  "node.exe": {
+    "process_name": "node.exe",
+    "limit_mb": null,
+    "blocked": false
+  },
+  "MsMpEng.exe": {
+    "process_name": "MsMpEng.exe",
+    "limit_mb": null,
+    "blocked": false
+  },
+  "System Idle Process": {
+    "process_name": "System Idle Process",
+    "limit_mb": null,
+    "blocked": false
+  },
+  "cowork-svc.exe": {
+    "process_name": "cowork-svc.exe",
+    "limit_mb": null,
+    "blocked": false
+  },
+  "HxTsr.exe": {
+    "process_name": "HxTsr.exe",
+    "limit_mb": null,
+    "blocked": false
+  },
+  "MpDefenderCoreService.exe": {
+    "process_name": "MpDefenderCoreService.exe",
+    "limit_mb": null,
+    "blocked": false
+  },
+  "gk.exe": {
+    "process_name": "gk.exe",
+    "limit_mb": null,
+    "blocked": false
+  },
+  "WhatsApp.Root.exe": {
+    "process_name": "WhatsApp.Root.exe",
+    "limit_mb": null,
+    "blocked": false
+  },
+  "PotPlayerMini64.exe": {
+    "process_name": "PotPlayerMini64.exe",
+    "limit_mb": null,
+    "blocked": false
+  },
+  "taskhostw.exe": {
+    "process_name": "taskhostw.exe",
+    "limit_mb": null,
+    "blocked": false
+  },
+  "WindowsPackageManagerServer.exe": {
+    "process_name": "WindowsPackageManagerServer.exe",
+    "limit_mb": null,
+    "blocked": false
+  }
+}
