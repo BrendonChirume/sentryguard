@@ -21,6 +21,7 @@ import Sidebar from "./components/Sidebar";
 import LimitModal from "./components/LimitModal";
 import ConnectionModal from "./components/ConnectionModal";
 import NetworkPromptModal from "./components/NetworkPromptModal";
+import HighUsagePromptModal from "./components/HighUsagePromptModal";
 import Dashboard from "./pages/Dashboard";
 import Applications from "./pages/Applications";
 import Rules from "./pages/Rules";
@@ -45,10 +46,12 @@ export default function App() {
   const [inspectorModal, setInspectorModal] = useState(null);
   const [networkStatus, setNetworkStatus] = useState(null);
   const [networkPromptOpen, setNetworkPromptOpen] = useState(false);
+  const [highUsageQueue, setHighUsageQueue] = useState([]);
 
   const prevUsageRef = useRef({});
   const lastEventTsRef = useRef(null);
   const notifiedNetworkRef = useRef(null);
+  const notifiedHighUsageRef = useRef(new Set());
 
   useEffect(() => {
     fetchSettings().then(res => {
@@ -147,6 +150,22 @@ export default function App() {
     });
   }, [apps, rulesMap]);
 
+  useEffect(() => {
+    const warnThreshMb = settings.autoThresh * 0.8;
+    const candidates = appsWithStatus.filter(
+      (a) => a.status === "active" && a.total_mb >= warnThreshMb && !notifiedHighUsageRef.current.has(a.name)
+    );
+    if (candidates.length === 0) return;
+    for (const app of candidates) {
+      notifiedHighUsageRef.current.add(app.name);
+    }
+    window.sentryguard?.notify?.(
+      "SentryGuard — High Data Usage",
+      `${candidates[0].name} is using a lot of data. Click to review.`
+    );
+    setHighUsageQueue((q) => [...q, ...candidates.map((a) => ({ name: a.name, totalMb: a.total_mb }))]);
+  }, [appsWithStatus, settings.autoThresh]);
+
   const totalUsedMb = useMemo(() => apps.reduce((s, a) => s + a.total_mb, 0), [apps]);
   const totalRate = useMemo(() => apps.reduce((s, a) => s + (a.speed || 0), 0), [apps]);
   const blkCnt = useMemo(() => appsWithStatus.filter(a => a.status === "blocked").length, [appsWithStatus]);
@@ -233,6 +252,17 @@ export default function App() {
     setNetworkPromptOpen(false);
   };
 
+  const handleLimitHighUsageApp = () => {
+    const current = highUsageQueue[0];
+    if (!current) return;
+    setLimit(current.name, settings.autoThresh).then(() => fetchRules().then(setRules)).catch(console.error);
+    setHighUsageQueue((q) => q.slice(1));
+  };
+
+  const dismissHighUsagePrompt = () => {
+    setHighUsageQueue((q) => q.slice(1));
+  };
+
   return (
     <div className="flex flex-col w-screen h-screen text-[#e2e8f0] font-sans leading-relaxed overflow-hidden">
       <TitleBar />
@@ -296,6 +326,14 @@ export default function App() {
         networkName={networkStatus?.name}
         onDecide={handleNetworkDecision}
         onDismiss={() => setNetworkPromptOpen(false)}
+      />
+      <HighUsagePromptModal
+        isOpen={highUsageQueue.length > 0}
+        appName={highUsageQueue[0]?.name}
+        totalMb={highUsageQueue[0]?.totalMb}
+        thresholdMb={settings.autoThresh}
+        onLimit={handleLimitHighUsageApp}
+        onIgnore={dismissHighUsagePrompt}
       />
     </div>
   );

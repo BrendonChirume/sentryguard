@@ -89,7 +89,13 @@ app.whenReady().then(() => {
 });
 
 ipcMain.on("notify", (_event, { title, body }) => {
-  new Notification({ title, body }).show();
+  const notification = new Notification({ title, body });
+  notification.on("click", () => {
+    if (!mainWindow) return;
+    mainWindow.show();
+    mainWindow.focus();
+  });
+  notification.show();
 });
 
 ipcMain.on("window-minimize", () => {
