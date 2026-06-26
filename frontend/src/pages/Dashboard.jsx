@@ -8,15 +8,15 @@ export default function Dashboard({ apps, top5, totalUsedMb, totalRate, blkCnt, 
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-xl font-bold text-slate-100 tracking-tight m-0">Dashboard</h1>
-        <p className="text-[13px] text-slate-600 mt-1 mb-0">Real-time network usage overview</p>
+        <h1 className="text-xl font-bold text-[color:var(--c-text-1)] tracking-tight m-0">Dashboard</h1>
+        <p className="text-[13px] text-[color:var(--c-text-3)] mt-1 mb-0">Real-time network usage overview</p>
       </div>
 
       <div className="grid grid-cols-4 gap-3.5 mb-5">
         <StatCard
           label="Total Today"
           value={formatBytes(totalUsedMb)}
-          colorClass="text-slate-100"
+          colorClass="text-[color:var(--c-text-1)]"
           bgClass="bg-blue-500/10"
           icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" /></svg>}
         />
@@ -45,7 +45,7 @@ export default function Dashboard({ apps, top5, totalUsedMb, totalRate, blkCnt, 
 
       <div className={`${card} p-4.5 mb-5`}>
         <div className={`${sectionLabel} mb-3.5`}>Data Usage — Top 5 Apps</div>
-        <div className="flex h-5.5 rounded-[5px] overflow-hidden bg-black/25 mb-3 gap-px">
+        <div className="flex h-5.5 rounded-[5px] overflow-hidden bg-[var(--c-inset-bg)] mb-3 gap-px">
           {top5.map((t, i) => (
             <div key={i} title={t.name} className="h-full transition-[width] duration-500 ease-out min-w-0.75 shrink-0" style={{ width: `${t.percent.toFixed(2)}%`, background: t.color }} />
           ))}
@@ -54,8 +54,8 @@ export default function Dashboard({ apps, top5, totalUsedMb, totalRate, blkCnt, 
           {top5.map((t, i) => (
             <div key={i} className="flex items-center gap-1.5">
               <div className="w-2.25 h-2.25 rounded-full shrink-0" style={{ background: t.color }} />
-              <span className="text-xs text-slate-400">{t.name}</span>
-              <span className="font-mono text-xs text-slate-600">{formatBytes(t.total_mb)}</span>
+              <span className="text-xs text-[color:var(--c-text-2)]">{t.name}</span>
+              <span className="font-mono text-xs text-[color:var(--c-text-3)]">{formatBytes(t.total_mb)}</span>
             </div>
           ))}
         </div>
@@ -67,11 +67,11 @@ export default function Dashboard({ apps, top5, totalUsedMb, totalRate, blkCnt, 
       </div>
 
       <div className={`${card} overflow-hidden`}>
-        <div className="px-4.5 py-3.5 border-b border-white/10 flex items-center justify-between">
+        <div className="px-4.5 py-3.5 border-b border-[var(--c-border-10)] flex items-center justify-between">
           <span className={sectionLabel}>Active Processes</span>
           <div className="flex items-center gap-1.5">
             <div className="animate-lpulse w-1.5 h-1.5 rounded-full bg-emerald-500" />
-            <span className="text-[11px] text-slate-700">Live · {pollSeconds}s</span>
+            <span className="text-[11px] text-[color:var(--c-text-4)]">Live · {pollSeconds}s</span>
           </div>
         </div>
         <ProcessTable apps={apps} onAction={onAction} limit={6} />

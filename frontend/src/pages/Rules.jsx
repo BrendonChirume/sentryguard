@@ -6,8 +6,8 @@ export default function Rules({ rules, newRule, onNewRuleChange, addRuleOpen, on
     <div className="max-w-[820px]">
       <div className="flex items-start justify-between mb-6">
         <div>
-          <h1 className="text-xl font-bold text-slate-100 tracking-tight m-0">Rules</h1>
-          <p className="text-[13px] text-slate-600 mt-1 mb-0">Manual block and bandwidth-limit rules per process</p>
+          <h1 className="text-xl font-bold text-[color:var(--c-text-1)] tracking-tight m-0">Rules</h1>
+          <p className="text-[13px] text-[color:var(--c-text-3)] mt-1 mb-0">Manual block and bandwidth-limit rules per process</p>
         </div>
         <button type="button" className={btnPrimary} onClick={onToggleAddRule}>+ Add Rule</button>
       </div>
@@ -39,7 +39,7 @@ export default function Rules({ rules, newRule, onNewRuleChange, addRuleOpen, on
                   <label className={label}>Throttle Speed (KB/s)</label>
                   <input type="number" value={newRule.throttleKbps} onChange={(e) => onNewRuleChange({ ...newRule, throttleKbps: e.target.value })} placeholder="optional" className={inputStyle} />
                 </div>
-                <div className="flex items-end pb-2.5 text-[11px] text-slate-600">
+                <div className="flex items-end pb-2.5 text-[11px] text-[color:var(--c-text-3)]">
                   Once the data limit is hit, speed is capped instead of blocking outright. Leave blank to block.
                 </div>
               </div>
@@ -73,7 +73,7 @@ export default function Rules({ rules, newRule, onNewRuleChange, addRuleOpen, on
             <div key={r.process_name} className={`${card} px-5 py-4 flex items-center gap-3.5`}>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap mb-1">
-                  <span className="font-mono text-[13px] font-medium text-[#e2e8f0]">{r.process_name}</span>
+                  <span className="font-mono text-[13px] font-medium text-[color:var(--c-text-1)]">{r.process_name}</span>
                   <span className={`px-1.5 py-0.5 rounded text-[11px] font-semibold tracking-wide uppercase inline-block ${statusBadgeClass(status)}`}>
                     {r.blocked ? "block" : status === "throttled" ? "throttled" : status === "scheduled" ? "scheduled limit" : "limit"}
                   </span>
@@ -82,7 +82,7 @@ export default function Rules({ rules, newRule, onNewRuleChange, addRuleOpen, on
                   )}
                 </div>
                 {r.limit_mb != null && (
-                  <span className="text-xs text-slate-700">
+                  <span className="text-xs text-[color:var(--c-text-4)]">
                     {r.throttle_kbps != null ? `Throttles to ${r.throttle_kbps} KB/s` : "Blocks"} at {r.limit_mb} MB / day
                     {r.start_time && r.end_time ? ` · active ${r.start_time}–${r.end_time}` : ""}
                   </span>
@@ -94,7 +94,7 @@ export default function Rules({ rules, newRule, onNewRuleChange, addRuleOpen, on
             </div>
           );
         })}
-        {rules.length === 0 && <div className={`${card} p-8 text-center text-slate-500`}>No rules configured.</div>}
+        {rules.length === 0 && <div className={`${card} p-8 text-center text-[color:var(--c-text-3)]`}>No rules configured.</div>}
       </div>
     </div>
   );

@@ -268,7 +268,7 @@ export default function App() {
   };
 
   return (
-    <div className="flex flex-col w-screen h-screen text-[#e2e8f0] font-sans leading-relaxed overflow-hidden">
+    <div className="flex flex-col w-screen h-screen text-[color:var(--c-text-1)] font-sans leading-relaxed overflow-hidden">
       <TitleBar />
       <div className="flex flex-1 min-h-0 overflow-hidden">
         <Sidebar page={page} onNavigate={setPage} connected={connected} />
@@ -278,7 +278,7 @@ export default function App() {
             <div className="glass border-x-0 border-t-0 px-6 py-1.5 flex items-center gap-2 flex-shrink-0 bg-amber-500/[0.04]">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>
               <span className="text-xs font-semibold text-amber-500">Backend unreachable</span>
-              <span className="text-xs text-slate-600">Could not connect to local SentryGuard service — usage data is unavailable</span>
+              <span className="text-xs text-[color:var(--c-text-3)]">Could not connect to local SentryGuard service — usage data is unavailable</span>
             </div>
           )}
 

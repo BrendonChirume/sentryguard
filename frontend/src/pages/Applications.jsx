@@ -7,8 +7,8 @@ export default function Applications({ apps, search, onSearchChange, appFilter, 
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-xl font-bold text-slate-100 tracking-tight m-0">Applications</h1>
-        <p className="text-[13px] text-slate-600 mt-1 mb-0">Manage per-application network access</p>
+        <h1 className="text-xl font-bold text-[color:var(--c-text-1)] tracking-tight m-0">Applications</h1>
+        <p className="text-[13px] text-[color:var(--c-text-3)] mt-1 mb-0">Manage per-application network access</p>
       </div>
       <div className="flex items-center gap-2.5 mb-4.5 flex-wrap">
         <div className="relative flex-1 min-w-[200px] max-w-[280px]">
@@ -30,7 +30,7 @@ export default function Applications({ apps, search, onSearchChange, appFilter, 
               type="button"
               onClick={() => onFilterChange(k)}
               className={`rounded-md px-3.5 py-1.5 text-[13px] font-medium cursor-pointer border ${
-                appFilter === k ? "bg-blue-500/15 text-blue-300 border-blue-400/25" : "bg-white/[0.03] text-slate-400 border-white/10 hover:bg-white/[0.07]"
+                appFilter === k ? "bg-blue-500/15 text-blue-300 border-blue-400/25" : "bg-[var(--c-surface-1)] text-[color:var(--c-text-2)] border-[var(--c-border-10)] hover:bg-[var(--c-surface-3)]"
               }`}
             >
               {fLabel}
