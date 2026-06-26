@@ -10,6 +10,12 @@ contextBridge.exposeInMainWorld("sentryguard", {
     ipcRenderer.on("high-usage-ignored", listener);
     return () => ipcRenderer.removeListener("high-usage-ignored", listener);
   },
+  notifyGlobalLimit: (totalMb, limitMb, period) => ipcRenderer.send("notify-global-limit", { totalMb, limitMb, period }),
+  onGlobalLimitIgnored: (callback) => {
+    const listener = (_event, payload) => callback(payload);
+    ipcRenderer.on("global-limit-ignored", listener);
+    return () => ipcRenderer.removeListener("global-limit-ignored", listener);
+  },
   windowControls: {
     minimize: () => ipcRenderer.send("window-minimize"),
     maximize: () => ipcRenderer.send("window-maximize"),

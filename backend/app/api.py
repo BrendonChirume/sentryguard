@@ -1,6 +1,7 @@
 import asyncio
 import time
 from contextlib import asynccontextmanager
+from datetime import datetime, timedelta
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
@@ -120,6 +121,12 @@ class SettingsRequest(BaseModel):
     auto_thresh: str
     start_win: str
     start_bk: str
+    global_limit_mb: str
+    global_limit_period: str
+
+
+class ThrottleAllRequest(BaseModel):
+    kbps: float
 
 
 def _usage_payload() -> list[dict]:
@@ -198,6 +205,17 @@ def get_history(process_name: str | None = None, hours: float = 24.0) -> list[di
     return db.get_history(process_name=process_name, since=since)
 
 
+@app.get("/global-usage")
+def get_global_usage(period: str = "weekly") -> dict:
+    now = datetime.now()
+    if period == "monthly":
+        period_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    else:
+        period_start = (now - timedelta(days=now.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
+    total_mb = db.get_period_usage_mb(period_start.timestamp())
+    return {"total_mb": round(total_mb, 3), "period": period, "period_start": period_start.timestamp()}
+
+
 @app.get("/network/status")
 def get_network_status() -> dict:
     decision = db.get_network_decision(_current_network_id) if _current_network_id else None
@@ -240,6 +258,8 @@ def get_settings() -> dict:
         "auto_thresh": db.get_setting("auto_thresh") or "500.0",
         "start_win": db.get_setting("start_win") or "false",
         "start_bk": db.get_setting("start_bk") or "true",
+        "global_limit_mb": db.get_setting("global_limit_mb") or "",
+        "global_limit_period": db.get_setting("global_limit_period") or "weekly",
     }
 
 
@@ -249,7 +269,24 @@ def save_settings(req: SettingsRequest) -> dict:
     db.set_setting("auto_thresh", req.auto_thresh)
     db.set_setting("start_win", req.start_win)
     db.set_setting("start_bk", req.start_bk)
+    db.set_setting("global_limit_mb", req.global_limit_mb)
+    db.set_setting("global_limit_period", req.global_limit_period)
     return {"status": "ok"}
+
+
+@app.post("/throttle-all")
+def throttle_all(req: ThrottleAllRequest) -> dict:
+    throttled = 0
+    for usage in monitor.snapshot():
+        rule = rules.get(usage.name)
+        if rule.blocked:
+            continue
+        policy.throttle_process(
+            usage.name, usage.pid, req.kbps,
+            detail=f"global data limit reached, throttled to {req.kbps} KB/s",
+        )
+        throttled += 1
+    return {"throttled": throttled, "kbps": req.kbps}
 
 
 @app.get("/connections/{process_name}")

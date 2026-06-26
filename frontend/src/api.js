@@ -69,6 +69,16 @@ export function setNotifyMuted(processName, muted) {
   return postJson("/notify-mute", { process_name: processName, muted });
 }
 
+export async function fetchGlobalUsage(period = "weekly") {
+  const res = await fetch(`${BASE_URL}/global-usage?period=${period}`);
+  if (!res.ok) throw new Error(`global usage failed: ${res.status}`);
+  return res.json();
+}
+
+export function throttleAll(kbps) {
+  return postJson("/throttle-all", { kbps });
+}
+
 export async function deleteRule(processName) {
   const res = await fetch(`${BASE_URL}/rules/${encodeURIComponent(processName)}`, { method: "DELETE" });
   if (!res.ok) throw new Error(`delete rule failed: ${res.status}`);

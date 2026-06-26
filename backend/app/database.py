@@ -98,6 +98,8 @@ class Database:
             self.set_setting("auto_thresh", "500.0")
             self.set_setting("start_win", "false")
             self.set_setting("start_bk", "true")
+            self.set_setting("global_limit_mb", "")
+            self.set_setting("global_limit_period", "weekly")
 
     # -- Rules --
     def get_all_rules(self) -> list[BlockRule]:
@@ -190,6 +192,18 @@ class Database:
             {"process_name": row["process_name"], "total_mb": row["total_mb"], "timestamp": row["timestamp"]}
             for row in c.fetchall()
         ]
+
+    def get_period_usage_mb(self, since: float) -> float:
+        """Approximates combined data usage since `since` by taking, per process,
+        the highest total_mb snapshot seen in the window (counters are cumulative
+        since each process started, so the max within the window is the closest
+        cheap proxy for that process-instance's usage during the period)."""
+        c = self.conn.cursor()
+        c.execute(
+            "SELECT process_name, MAX(total_mb) AS max_mb FROM snapshots WHERE timestamp >= ? GROUP BY process_name",
+            (since,),
+        )
+        return sum(row["max_mb"] for row in c.fetchall())
 
     # -- Networks --
     def get_network_decision(self, network_id: str) -> dict | None:

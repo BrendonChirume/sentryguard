@@ -1,9 +1,40 @@
+import { Listbox, ListboxButton, ListboxOption, ListboxOptions } from "@headlessui/react";
 import ToggleSwitch from "../components/ToggleSwitch";
 import KnownNetworks from "../components/KnownNetworks";
 import { card } from "../lib/ui";
 import logoMark from "../assets/mark-128.png";
 
 const numberFieldClass = "bg-[var(--c-surface-2)] border border-[var(--c-border-10)] rounded-lg py-1.5 px-2.5 text-[color:var(--c-text-1)] text-sm font-medium text-center outline-none font-mono focus:border-blue-400/50 focus:bg-[var(--c-surface-3)] transition-colors duration-150";
+
+const PERIOD_OPTIONS = [
+  { value: "weekly", label: "Weekly" },
+  { value: "monthly", label: "Monthly" },
+];
+
+function PeriodSelect({ value, onChange }) {
+  const current = PERIOD_OPTIONS.find((o) => o.value === value) ?? PERIOD_OPTIONS[0];
+  return (
+    <Listbox value={value} onChange={onChange}>
+      <div className="relative">
+        <ListboxButton className="bg-[var(--c-surface-2)] border border-[var(--c-border-10)] rounded-lg py-1.5 px-2.5 text-[color:var(--c-text-1)] text-[13px] font-medium cursor-pointer flex items-center gap-1.5">
+          {current.label}
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
+        </ListboxButton>
+        <ListboxOptions anchor="bottom end" className="w-[var(--button-width)] mt-1.5 rounded-xl glass-strong shadow-md p-1 z-50">
+          {PERIOD_OPTIONS.map((o) => (
+            <ListboxOption
+              key={o.value}
+              value={o.value}
+              className="px-3 py-2 rounded-lg text-[13px] text-[color:var(--c-text-1)] cursor-pointer data-focus:bg-[var(--c-surface-3)] data-selected:text-blue-400"
+            >
+              {o.label}
+            </ListboxOption>
+          ))}
+        </ListboxOptions>
+      </div>
+    </Listbox>
+  );
+}
 
 export default function Settings({ settings, onUpdate, networkStatus }) {
   return (
@@ -57,6 +88,27 @@ export default function Settings({ settings, onUpdate, networkStatus }) {
               <div className="text-xs text-[color:var(--c-text-3)] mt-0.5">Auto-start the FastAPI service when app opens</div>
             </div>
             <ToggleSwitch on={settings.startBk} onClick={() => onUpdate({ startBk: !settings.startBk })} />
+          </div>
+        </div>
+
+        <div className={`${card} px-5 py-4.5`}>
+          <div className="flex items-center justify-between gap-5">
+            <div>
+              <div className="text-sm font-medium text-[color:var(--c-text-1)]">Global Data Limit</div>
+              <div className="text-xs text-[color:var(--c-text-3)] mt-0.5">Combined usage across all apps before you're prompted to throttle everything</div>
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <input
+                type="number"
+                min="0"
+                placeholder="off"
+                value={settings.globalLimitMb ?? ""}
+                onChange={(e) => onUpdate({ globalLimitMb: e.target.value ? Number(e.target.value) : null })}
+                className={`${numberFieldClass} w-[78px]`}
+              />
+              <span className="text-[13px] text-[color:var(--c-text-3)]">MB /</span>
+              <PeriodSelect value={settings.globalLimitPeriod} onChange={(globalLimitPeriod) => onUpdate({ globalLimitPeriod })} />
+            </div>
           </div>
         </div>
 

@@ -14,6 +14,8 @@ import {
   deleteRule,
   unthrottleProcess,
   setNotifyMuted,
+  fetchGlobalUsage,
+  throttleAll,
   fetchNetworkStatus,
   saveNetworkDecision
 } from "./api";
@@ -24,6 +26,7 @@ import LimitModal from "./components/LimitModal";
 import ConnectionModal from "./components/ConnectionModal";
 import NetworkPromptModal from "./components/NetworkPromptModal";
 import HighUsagePromptModal from "./components/HighUsagePromptModal";
+import GlobalLimitPromptModal from "./components/GlobalLimitPromptModal";
 import Dashboard from "./pages/Dashboard";
 import Applications from "./pages/Applications";
 import Rules from "./pages/Rules";
@@ -41,7 +44,9 @@ export default function App() {
 
   const [search, setSearch] = useState("");
   const [appFilter, setAppFilter] = useState("all");
-  const [settings, setSettings] = useState({ poll: 2, autoThresh: 500, startWin: false, startBk: true });
+  const [settings, setSettings] = useState({ poll: 2, autoThresh: 500, startWin: false, startBk: true, globalLimitMb: null, globalLimitPeriod: "weekly" });
+  const [globalUsage, setGlobalUsage] = useState(null);
+  const [globalLimitPrompt, setGlobalLimitPrompt] = useState(null);
 
   const [newRule, setNewRule] = useState({ name: "", type: "block", limit: 1000, startTime: "", endTime: "", category: "", throttleKbps: "" });
   const [addRuleOpen, setAddRuleOpen] = useState(false);
@@ -55,6 +60,7 @@ export default function App() {
   const lastEventTsRef = useRef(null);
   const notifiedNetworkRef = useRef(null);
   const notifiedHighUsageRef = useRef(new Set());
+  const notifiedGlobalLimitRef = useRef(null);
 
   useEffect(() => {
     fetchSettings().then(res => {
@@ -63,6 +69,8 @@ export default function App() {
         autoThresh: Number(res.auto_thresh) || 500,
         startWin: res.start_win === "true",
         startBk: res.start_bk === "true",
+        globalLimitMb: res.global_limit_mb ? Number(res.global_limit_mb) : null,
+        globalLimitPeriod: res.global_limit_period || "weekly",
       });
     }).catch(console.error);
   }, []);
@@ -172,6 +180,28 @@ export default function App() {
     return unsub;
   }, []);
 
+  useEffect(() => {
+    const refresh = () => fetchGlobalUsage(settings.globalLimitPeriod).then(setGlobalUsage).catch(console.error);
+    refresh();
+    const inv = setInterval(refresh, 60000);
+    return () => clearInterval(inv);
+  }, [settings.globalLimitPeriod]);
+
+  useEffect(() => {
+    if (!globalUsage || !settings.globalLimitMb) return;
+    if (globalUsage.total_mb < settings.globalLimitMb) return;
+    if (notifiedGlobalLimitRef.current === globalUsage.period_start) return;
+    notifiedGlobalLimitRef.current = globalUsage.period_start;
+    window.sentryguard?.notifyGlobalLimit?.(globalUsage.total_mb, settings.globalLimitMb, settings.globalLimitPeriod);
+  }, [globalUsage, settings.globalLimitMb, settings.globalLimitPeriod]);
+
+  useEffect(() => {
+    const unsub = window.sentryguard?.onGlobalLimitIgnored?.(({ totalMb, limitMb, period }) => {
+      setGlobalLimitPrompt({ totalMb, limitMb, period });
+    });
+    return unsub;
+  }, []);
+
   const totalUsedMb = useMemo(() => apps.reduce((s, a) => s + a.total_mb, 0), [apps]);
   const totalRate = useMemo(() => apps.reduce((s, a) => s + (a.speed || 0), 0), [apps]);
   const blkCnt = useMemo(() => appsWithStatus.filter(a => a.status === "blocked").length, [appsWithStatus]);
@@ -227,6 +257,8 @@ export default function App() {
       auto_thresh: String(next.autoThresh),
       start_win: String(next.startWin),
       start_bk: String(next.startBk),
+      global_limit_mb: next.globalLimitMb ? String(next.globalLimitMb) : "",
+      global_limit_period: next.globalLimitPeriod,
     }).catch(console.error);
   };
 
@@ -280,6 +312,15 @@ export default function App() {
 
   const dismissHighUsagePrompt = () => {
     setHighUsageQueue((q) => q.slice(1));
+  };
+
+  const handleThrottleAll = (kbps) => {
+    throttleAll(kbps).then(() => fetchRules().then(setRules)).catch(console.error);
+    setGlobalLimitPrompt(null);
+  };
+
+  const dismissGlobalLimitPrompt = () => {
+    setGlobalLimitPrompt(null);
   };
 
   return (
@@ -356,6 +397,14 @@ export default function App() {
         thresholdMb={settings.autoThresh}
         onLimit={handleLimitHighUsageApp}
         onIgnore={dismissHighUsagePrompt}
+      />
+      <GlobalLimitPromptModal
+        isOpen={globalLimitPrompt !== null}
+        totalMb={globalLimitPrompt?.totalMb}
+        limitMb={globalLimitPrompt?.limitMb}
+        period={globalLimitPrompt?.period}
+        onThrottle={handleThrottleAll}
+        onIgnore={dismissGlobalLimitPrompt}
       />
     </div>
   );

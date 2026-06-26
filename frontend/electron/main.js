@@ -200,6 +200,31 @@ ipcMain.on("notify-high-usage", (_event, { appName, totalMb }) => {
   notification.show();
 });
 
+ipcMain.on("notify-global-limit", (_event, { totalMb, limitMb, period }) => {
+  if (!Notification.isSupported()) {
+    mainWindow?.webContents.send("global-limit-ignored", { totalMb, limitMb, period });
+    return;
+  }
+
+  let clicked = false;
+  const notification = new Notification({
+    title: "SentryGuard — Data Limit Reached",
+    body: `Combined usage has hit your ${period} limit. Click to review.`,
+  });
+
+  notification.on("click", () => {
+    clicked = true;
+    mainWindow?.show();
+    mainWindow?.focus();
+  });
+
+  notification.on("close", () => {
+    if (!clicked) mainWindow?.webContents.send("global-limit-ignored", { totalMb, limitMb, period });
+  });
+
+  notification.show();
+});
+
 ipcMain.on("window-minimize", () => {
   mainWindow?.minimize();
 });
