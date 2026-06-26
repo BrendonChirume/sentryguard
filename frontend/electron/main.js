@@ -1,5 +1,6 @@
 import { app, BrowserWindow, session, Tray, Menu, Notification, nativeImage, ipcMain } from "electron";
-import { autoUpdater } from "electron-updater";
+import electronUpdater from "electron-updater";
+const { autoUpdater } = electronUpdater;
 import { spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
