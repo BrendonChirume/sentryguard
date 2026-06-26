@@ -51,12 +51,16 @@
     ],
     "win": {
       "icon": "build/icon.ico",
-      "target": "nsis",
+      "target": ["nsis", "msi"],
       "requestedExecutionLevel": "requireAdministrator"
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true
+    },
+    "msi": {
+      "warningsAsErrors": false,
+      "upgradeCode": "1b6f1a3a-1f1e-4f0a-9b8e-7c6c3f6f0a1d"
     },
     "publish": {
       "provider": "github",
