@@ -1,5 +1,5 @@
 import NavIcon from "./NavIcon";
-import logoMark from "../assets/mark-192.png";
+import logoMark from "../assets/mark-128.png";
 
 const NAV_ITEMS = [
   ["dashboard", "Dashboard"],

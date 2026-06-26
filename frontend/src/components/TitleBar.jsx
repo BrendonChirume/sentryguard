@@ -1,4 +1,4 @@
-import logoMark from "../assets/mark-192.png";
+import logoMark from "../assets/mark-128.png";
 
 export default function TitleBar() {
   const controls = typeof window !== "undefined" ? window.sentryguard?.windowControls : null;

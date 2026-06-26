@@ -93,11 +93,32 @@ export async function forgetNetwork(networkId) {
   return res.json();
 }
 
+const USAGE_RECONNECT_DELAY_MS = 2000;
+
 export function subscribeUsage(onUsage, onConnectionChange) {
-  const ws = new WebSocket(`${WS_URL}/ws/usage`);
-  ws.onopen = () => onConnectionChange?.(true);
-  ws.onclose = () => onConnectionChange?.(false);
-  ws.onerror = () => onConnectionChange?.(false);
-  ws.onmessage = (event) => onUsage(JSON.parse(event.data));
-  return () => ws.close();
+  let ws = null;
+  let retryTimer = null;
+  let stopped = false;
+
+  function connect() {
+    if (stopped) return;
+    ws = new WebSocket(`${WS_URL}/ws/usage`);
+    ws.onopen = () => onConnectionChange?.(true);
+    ws.onmessage = (event) => onUsage(JSON.parse(event.data));
+    ws.onclose = () => {
+      onConnectionChange?.(false);
+      // The backend (a separately-spawned process) may not be up yet when this first
+      // connects, or may restart — keep retrying instead of giving up permanently.
+      if (!stopped) retryTimer = setTimeout(connect, USAGE_RECONNECT_DELAY_MS);
+    };
+    ws.onerror = () => ws.close();
+  }
+
+  connect();
+
+  return () => {
+    stopped = true;
+    clearTimeout(retryTimer);
+    ws?.close();
+  };
 }

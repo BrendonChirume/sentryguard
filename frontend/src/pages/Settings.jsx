@@ -1,7 +1,7 @@
 import ToggleSwitch from "../components/ToggleSwitch";
 import KnownNetworks from "../components/KnownNetworks";
 import { card } from "../lib/ui";
-import logoMark from "../assets/mark-192.png";
+import logoMark from "../assets/mark-128.png";
 
 const numberFieldClass = "bg-white/[0.04] border border-white/10 rounded-lg py-1.5 px-2.5 text-[#e2e8f0] text-sm font-medium text-center outline-none font-mono focus:border-blue-400/50 focus:bg-white/[0.06] transition-colors duration-150";
 
