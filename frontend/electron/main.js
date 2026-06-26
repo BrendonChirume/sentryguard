@@ -1,4 +1,5 @@
 import { app, BrowserWindow, session, Tray, Menu, Notification, nativeImage, ipcMain } from "electron";
+import { autoUpdater } from "electron-updater";
 import { spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
@@ -127,11 +128,34 @@ function createTray() {
   tray.on("click", showWindow);
 }
 
+function setupAutoUpdate() {
+  if (isDev) return;
+
+  autoUpdater.autoDownload = true;
+  autoUpdater.autoInstallOnAppQuit = true;
+
+  autoUpdater.on("update-downloaded", (info) => {
+    new Notification({
+      title: "SentryGuard update ready",
+      body: `Version ${info.version} will install the next time the app restarts.`,
+    }).show();
+  });
+
+  autoUpdater.on("error", (err) => {
+    const logPath = path.join(app.getPath("userData"), "backend.log");
+    fs.appendFileSync(logPath, `\nautoUpdater error: ${err.stack || err}\n`);
+  });
+
+  autoUpdater.checkForUpdates().catch(() => {});
+  setInterval(() => autoUpdater.checkForUpdates().catch(() => {}), 4 * 60 * 60 * 1000);
+}
+
 app.whenReady().then(() => {
   applyCsp();
   startBackend();
   createWindow();
   createTray();
+  setupAutoUpdate();
 });
 
 app.on("before-quit", () => {
