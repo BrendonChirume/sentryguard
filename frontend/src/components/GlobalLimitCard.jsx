@@ -6,15 +6,17 @@ import { card, sectionLabel, inputStyle, label, btnPrimary, btnGhost, smBtnClass
 import { formatBytes } from "../lib/format";
 
 const PERIOD_OPTIONS = [
+  { value: "daily", label: "Daily" },
   { value: "weekly", label: "Weekly" },
   { value: "monthly", label: "Monthly" },
 ];
 
-const PERIOD_NOUN = { weekly: "Week", monthly: "Month" };
+const PERIOD_NOUN = { daily: "Day", weekly: "Week", monthly: "Month" };
 
 function periodEnd(periodStart, period) {
   const start = new Date(periodStart * 1000);
   if (period === "monthly") return new Date(start.getFullYear(), start.getMonth() + 1, 1);
+  if (period === "daily") return new Date(start.getTime() + 86400 * 1000);
   return new Date(start.getTime() + 7 * 86400 * 1000);
 }
 

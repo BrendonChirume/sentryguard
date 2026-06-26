@@ -7,6 +7,7 @@ import logoMark from "../assets/mark-128.png";
 const numberFieldClass = "bg-[var(--c-surface-2)] border border-[var(--c-border-10)] rounded-lg py-1.5 px-2.5 text-[color:var(--c-text-1)] text-sm font-medium text-center outline-none font-mono focus:border-blue-400/50 focus:bg-[var(--c-surface-3)] transition-colors duration-150";
 
 const PERIOD_OPTIONS = [
+  { value: "daily", label: "Daily" },
   { value: "weekly", label: "Weekly" },
   { value: "monthly", label: "Monthly" },
 ];

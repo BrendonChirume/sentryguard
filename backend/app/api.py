@@ -210,6 +210,8 @@ def get_global_usage(period: str = "weekly") -> dict:
     now = datetime.now()
     if period == "monthly":
         period_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    elif period == "daily":
+        period_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
     else:
         period_start = (now - timedelta(days=now.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
     total_mb = db.get_period_usage_mb(period_start.timestamp())

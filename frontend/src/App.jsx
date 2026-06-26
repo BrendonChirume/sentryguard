@@ -161,6 +161,8 @@ export default function App() {
     });
   }, [apps, rulesMap]);
 
+  const totalUsedMb = useMemo(() => apps.reduce((s, a) => s + a.total_mb, 0), [apps]);
+
   useEffect(() => {
     const warnThreshMb = settings.autoThresh * 0.8;
     const candidates = appsWithStatus.filter(
@@ -189,11 +191,11 @@ export default function App() {
 
   useEffect(() => {
     if (!globalUsage || !settings.globalLimitMb) return;
-    if (globalUsage.total_mb < settings.globalLimitMb) return;
+    if (totalUsedMb < settings.globalLimitMb) return;
     if (notifiedGlobalLimitRef.current === globalUsage.period_start) return;
     notifiedGlobalLimitRef.current = globalUsage.period_start;
-    window.sentryguard?.notifyGlobalLimit?.(globalUsage.total_mb, settings.globalLimitMb, settings.globalLimitPeriod);
-  }, [globalUsage, settings.globalLimitMb, settings.globalLimitPeriod]);
+    window.sentryguard?.notifyGlobalLimit?.(totalUsedMb, settings.globalLimitMb, settings.globalLimitPeriod);
+  }, [totalUsedMb, globalUsage, settings.globalLimitMb, settings.globalLimitPeriod]);
 
   useEffect(() => {
     const unsub = window.sentryguard?.onGlobalLimitIgnored?.(({ totalMb, limitMb, period }) => {
@@ -202,7 +204,6 @@ export default function App() {
     return unsub;
   }, []);
 
-  const totalUsedMb = useMemo(() => apps.reduce((s, a) => s + a.total_mb, 0), [apps]);
   const totalRate = useMemo(() => apps.reduce((s, a) => s + (a.speed || 0), 0), [apps]);
   const blkCnt = useMemo(() => appsWithStatus.filter(a => a.status === "blocked").length, [appsWithStatus]);
   const limCnt = useMemo(() => appsWithStatus.filter(a => a.status === "limited" || a.status === "throttled").length, [appsWithStatus]);

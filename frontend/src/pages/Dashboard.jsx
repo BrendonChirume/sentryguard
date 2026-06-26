@@ -22,7 +22,7 @@ export default function Dashboard({ apps, top5, totalUsedMb, totalRate, blkCnt, 
       </div>
 
       <GlobalLimitCard
-        totalMb={globalUsage?.total_mb ?? 0}
+        totalMb={totalUsedMb}
         limitMb={globalLimitMb}
         period={globalLimitPeriod}
         periodStart={globalUsage?.period_start}
