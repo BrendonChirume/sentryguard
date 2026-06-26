@@ -10,7 +10,7 @@ export default function HistoryChart({ history }) {
   }, [history]);
 
   if (points.length < 2) {
-    return <div className="text-xs text-slate-700 py-2">Not enough history yet — snapshots are recorded every 5 minutes.</div>;
+    return <div className="text-xs text-[color:var(--c-text-4)] py-2">Not enough history yet — snapshots are recorded every 5 minutes.</div>;
   }
 
   const width = 760, height = 120, pad = 8;

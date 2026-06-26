@@ -14,8 +14,8 @@ export default function LimitModal({ isOpen, onClose, appName, currentLimit, cur
     <div className={modalOverlay} onClick={onClose}>
       <div className={`${modalPanel} w-[360px] p-6`} onClick={(e) => e.stopPropagation()}>
         <div className="mb-5">
-          <div className="text-base font-bold text-slate-100 mb-1">Set Data Limit</div>
-          <div className="text-[13px] text-slate-500">Cap network usage for <span className="text-slate-400 font-mono">{appName}</span></div>
+          <div className="text-base font-bold text-[color:var(--c-text-1)] mb-1">Set Data Limit</div>
+          <div className="text-[13px] text-[color:var(--c-text-3)]">Cap network usage for <span className="text-[color:var(--c-text-2)] font-mono">{appName}</span></div>
         </div>
         <div className="mb-4">
           <label className={label}>Data Limit (MB)</label>
@@ -24,7 +24,7 @@ export default function LimitModal({ isOpen, onClose, appName, currentLimit, cur
         <div className="mb-5">
           <label className={label}>Throttle Speed (KB/s) — optional</label>
           <input type="number" min="1" value={throttleVal} onChange={(e) => setThrottleVal(e.target.value)} placeholder="e.g. 100" className={`${inputStyle} text-base font-medium px-3 py-2.5`} />
-          <div className="text-[11px] text-slate-600 mt-1.5">
+          <div className="text-[11px] text-[color:var(--c-text-3)] mt-1.5">
             Once the limit is reached, the app's speed is capped instead of fully blocking it. Leave blank to block outright.
           </div>
         </div>
