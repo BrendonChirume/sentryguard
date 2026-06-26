@@ -152,6 +152,7 @@ function setupAutoUpdate() {
 }
 
 app.whenReady().then(() => {
+  app.setAppUserModelId("com.sentryguard.app");
   applyCsp();
   startBackend();
   createWindow();
@@ -171,6 +172,31 @@ ipcMain.on("notify", (_event, { title, body }) => {
     mainWindow.show();
     mainWindow.focus();
   });
+  notification.show();
+});
+
+ipcMain.on("notify-high-usage", (_event, { appName, totalMb }) => {
+  if (!Notification.isSupported()) {
+    mainWindow?.webContents.send("high-usage-ignored", { appName, totalMb });
+    return;
+  }
+
+  let clicked = false;
+  const notification = new Notification({
+    title: "SentryGuard — High Data Usage",
+    body: `${appName} is using a lot of data. Click to review.`,
+  });
+
+  notification.on("click", () => {
+    clicked = true;
+    mainWindow?.show();
+    mainWindow?.focus();
+  });
+
+  notification.on("close", () => {
+    if (!clicked) mainWindow?.webContents.send("high-usage-ignored", { appName, totalMb });
+  });
+
   notification.show();
 });
 

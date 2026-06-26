@@ -1,7 +1,85 @@
+import { useMemo, useState } from "react";
+import { Combobox, ComboboxButton, ComboboxInput, ComboboxOption, ComboboxOptions, Listbox, ListboxButton, ListboxOption, ListboxOptions } from "@headlessui/react";
 import { ruleStatus, statusBadgeClass } from "../lib/format";
 import { card, sectionLabel, inputStyle, label, btnPrimary, btnGhost, btnDanger } from "../lib/ui";
 
-export default function Rules({ rules, newRule, onNewRuleChange, addRuleOpen, onToggleAddRule, onAddRule, onDeleteRule }) {
+function ProcessNameField({ value, apps, onChange }) {
+  const [query, setQuery] = useState("");
+
+  const processNames = useMemo(() => {
+    const names = [...new Set(apps.map((a) => a.name))].sort((a, b) => a.localeCompare(b));
+    if (!query) return names;
+    return names.filter((n) => n.toLowerCase().includes(query.toLowerCase()));
+  }, [apps, query]);
+
+  return (
+    <Combobox value={value} onChange={(v) => v != null && onChange(v)} onClose={() => setQuery("")}>
+      <div className="relative">
+        <ComboboxInput
+          className={`${inputStyle} font-mono`}
+          displayValue={(v) => v ?? ""}
+          placeholder="chrome.exe"
+          onChange={(e) => {
+            setQuery(e.target.value);
+            onChange(e.target.value);
+          }}
+        />
+        <ComboboxButton className="absolute inset-y-0 right-0 flex items-center px-2.5 text-[color:var(--c-text-3)]">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
+        </ComboboxButton>
+        <ComboboxOptions
+          anchor="bottom start"
+          className="w-[var(--input-width)] mt-1.5 max-h-60 overflow-auto rounded-xl glass-strong shadow-md p-1 z-50 empty:invisible"
+        >
+          {processNames.map((name) => (
+            <ComboboxOption
+              key={name}
+              value={name}
+              className="px-3 py-2 rounded-lg text-[13px] font-mono text-[color:var(--c-text-1)] cursor-pointer data-focus:bg-[var(--c-surface-3)] data-selected:text-blue-400"
+            >
+              {name}
+            </ComboboxOption>
+          ))}
+          {processNames.length === 0 && (
+            <div className="px-3 py-2 text-[13px] text-[color:var(--c-text-3)]">No running processes match "{query}"</div>
+          )}
+        </ComboboxOptions>
+      </div>
+    </Combobox>
+  );
+}
+
+const ACTION_OPTIONS = [
+  { value: "block", label: "Block" },
+  { value: "limit", label: "Limit" },
+];
+
+function ActionField({ value, onChange }) {
+  const current = ACTION_OPTIONS.find((o) => o.value === value) ?? ACTION_OPTIONS[0];
+  return (
+    <Listbox value={value} onChange={onChange}>
+      <div className="relative">
+        <ListboxButton className={`${inputStyle} cursor-pointer flex items-center justify-between text-left`}>
+          {current.label}
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
+        </ListboxButton>
+        <ListboxOptions anchor="bottom start" className="w-[var(--button-width)] mt-1.5 rounded-xl glass-strong shadow-md p-1 z-50">
+          {ACTION_OPTIONS.map((o) => (
+            <ListboxOption
+              key={o.value}
+              value={o.value}
+              className="px-3 py-2 rounded-lg text-[13px] text-[color:var(--c-text-1)] cursor-pointer data-focus:bg-[var(--c-surface-3)] data-selected:text-blue-400"
+            >
+              {o.label}
+            </ListboxOption>
+          ))}
+        </ListboxOptions>
+      </div>
+    </Listbox>
+  );
+}
+
+export default function Rules({ rules, apps, newRule, onNewRuleChange, addRuleOpen, onToggleAddRule, onAddRule, onDeleteRule }) {
   return (
     <div className="max-w-[820px]">
       <div className="flex items-start justify-between mb-6">
@@ -18,14 +96,11 @@ export default function Rules({ rules, newRule, onNewRuleChange, addRuleOpen, on
           <div className="grid grid-cols-[1fr_140px_140px] gap-3 mb-3.5">
             <div>
               <label className={label}>Process Name</label>
-              <input type="text" value={newRule.name} onChange={(e) => onNewRuleChange({ ...newRule, name: e.target.value })} placeholder="chrome.exe" className={`${inputStyle} font-mono`} />
+              <ProcessNameField value={newRule.name} apps={apps} onChange={(name) => onNewRuleChange({ ...newRule, name })} />
             </div>
             <div>
               <label className={label}>Action</label>
-              <select value={newRule.type} onChange={(e) => onNewRuleChange({ ...newRule, type: e.target.value })} className={`${inputStyle} cursor-pointer`}>
-                <option value="block">Block</option>
-                <option value="limit">Limit</option>
-              </select>
+              <ActionField value={newRule.type} onChange={(type) => onNewRuleChange({ ...newRule, type })} />
             </div>
             <div>
               <label className={label}>Data Limit (MB)</label>

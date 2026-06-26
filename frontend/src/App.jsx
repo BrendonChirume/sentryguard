@@ -13,6 +13,7 @@ import {
   saveRule,
   deleteRule,
   unthrottleProcess,
+  setNotifyMuted,
   fetchNetworkStatus,
   saveNetworkDecision
 } from "./api";
@@ -35,6 +36,7 @@ export default function App() {
   const [rules, setRules] = useState([]);
   const [events, setEvents] = useState([]);
   const [history, setHistory] = useState([]);
+  const [historyHours, setHistoryHours] = useState(24);
   const [connected, setConnected] = useState(false);
 
   const [search, setSearch] = useState("");
@@ -111,11 +113,11 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    const refresh = () => fetchHistory(24).then(setHistory).catch(console.error);
+    const refresh = () => fetchHistory(historyHours).then(setHistory).catch(console.error);
     refresh();
     const inv = setInterval(refresh, 60000);
     return () => clearInterval(inv);
-  }, []);
+  }, [historyHours]);
 
   useEffect(() => {
     const refresh = () => {
@@ -140,24 +142,35 @@ export default function App() {
   }, [rules]);
 
   const appsWithStatus = useMemo(() => {
-    return apps.map(app => ({ ...app, status: ruleStatus(rulesMap.get(app.name)) }));
+    return apps.map(app => {
+      const rule = rulesMap.get(app.name);
+      return {
+        ...app,
+        status: ruleStatus(rule),
+        limitMb: rule?.limit_mb ?? null,
+        notifyMuted: rule?.notify_muted ?? false,
+      };
+    });
   }, [apps, rulesMap]);
 
   useEffect(() => {
     const warnThreshMb = settings.autoThresh * 0.8;
     const candidates = appsWithStatus.filter(
-      (a) => a.status === "active" && a.total_mb >= warnThreshMb && !notifiedHighUsageRef.current.has(a.name)
+      (a) => a.status === "active" && !a.notifyMuted && a.total_mb >= warnThreshMb && !notifiedHighUsageRef.current.has(a.name)
     );
     if (candidates.length === 0) return;
     for (const app of candidates) {
       notifiedHighUsageRef.current.add(app.name);
+      window.sentryguard?.notifyHighUsage?.(app.name, app.total_mb);
     }
-    window.sentryguard?.notify?.(
-      "SentryGuard — High Data Usage",
-      `${candidates[0].name} is using a lot of data. Click to review.`
-    );
-    setHighUsageQueue((q) => [...q, ...candidates.map((a) => ({ name: a.name, totalMb: a.total_mb }))]);
   }, [appsWithStatus, settings.autoThresh]);
+
+  useEffect(() => {
+    const unsub = window.sentryguard?.onHighUsageIgnored?.(({ appName, totalMb }) => {
+      setHighUsageQueue((q) => [...q, { name: appName, totalMb }]);
+    });
+    return unsub;
+  }, []);
 
   const totalUsedMb = useMemo(() => apps.reduce((s, a) => s + a.total_mb, 0), [apps]);
   const totalRate = useMemo(() => apps.reduce((s, a) => s + (a.speed || 0), 0), [apps]);
@@ -191,6 +204,8 @@ export default function App() {
       setModal({ appName: app.name, limit: rule?.limit_mb ?? null, throttleKbps: rule?.throttle_kbps ?? null });
     } else if (action === "inspect") {
       fetchConnections(app.name).then(res => setInspectorModal({ appName: app.name, connections: res })).catch(console.error);
+    } else if (action === "mute" || action === "unmute") {
+      setNotifyMuted(app.name, action === "mute").then(() => fetchRules().then(setRules));
     }
   };
 
@@ -292,6 +307,8 @@ export default function App() {
                 blkCnt={blkCnt}
                 limCnt={limCnt}
                 history={history}
+                historyHours={historyHours}
+                onHistoryHoursChange={setHistoryHours}
                 pollSeconds={settings.poll}
                 onAction={handleAction}
               />
@@ -309,6 +326,7 @@ export default function App() {
             {page === "rules" && (
               <Rules
                 rules={rules}
+                apps={appsWithStatus}
                 newRule={newRule}
                 onNewRuleChange={setNewRule}
                 addRuleOpen={addRuleOpen}

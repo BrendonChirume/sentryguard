@@ -1,3 +1,4 @@
+import { RadioGroup, Radio } from "@headlessui/react";
 import ProcessTable from "../components/ProcessTable";
 import { card, inputStyle } from "../lib/ui";
 
@@ -23,20 +24,17 @@ export default function Applications({ apps, search, onSearchChange, appFilter, 
             className={`${inputStyle} pl-[30px]`}
           />
         </div>
-        <div className="flex gap-1.5">
+        <RadioGroup value={appFilter} onChange={onFilterChange} className="flex gap-1.5">
           {FILTERS.map(([k, fLabel]) => (
-            <button
+            <Radio
               key={k}
-              type="button"
-              onClick={() => onFilterChange(k)}
-              className={`rounded-md px-3.5 py-1.5 text-[13px] font-medium cursor-pointer border ${
-                appFilter === k ? "bg-blue-500/15 text-blue-300 border-blue-400/25" : "bg-[var(--c-surface-1)] text-[color:var(--c-text-2)] border-[var(--c-border-10)] hover:bg-[var(--c-surface-3)]"
-              }`}
+              value={k}
+              className="rounded-md px-3.5 py-1.5 text-[13px] font-medium cursor-pointer border bg-[var(--c-surface-1)] text-[color:var(--c-text-2)] border-[var(--c-border-10)] hover:bg-[var(--c-surface-3)] data-checked:bg-blue-500/15 data-checked:text-blue-300 data-checked:border-blue-400/25"
             >
               {fLabel}
-            </button>
+            </Radio>
           ))}
-        </div>
+        </RadioGroup>
       </div>
       <div className={`${card} overflow-hidden`}>
         <ProcessTable apps={apps} onAction={onAction} />

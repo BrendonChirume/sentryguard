@@ -1,10 +1,18 @@
+import { RadioGroup, Radio } from "@headlessui/react";
 import StatCard from "../components/StatCard";
 import HistoryChart from "../components/HistoryChart";
 import ProcessTable from "../components/ProcessTable";
 import { formatBytes, formatSpeed } from "../lib/format";
 import { card, sectionLabel } from "../lib/ui";
 
-export default function Dashboard({ apps, top5, totalUsedMb, totalRate, blkCnt, limCnt, history, pollSeconds, onAction }) {
+const RANGE_OPTIONS = [
+  { hours: 24, label: "24h" },
+  { hours: 168, label: "7d" },
+  { hours: 720, label: "30d" },
+];
+
+export default function Dashboard({ apps, top5, totalUsedMb, totalRate, blkCnt, limCnt, history, historyHours, onHistoryHoursChange, pollSeconds, onAction }) {
+  const rangeLabel = RANGE_OPTIONS.find((r) => r.hours === historyHours)?.label ?? "24h";
   return (
     <div>
       <div className="mb-6">
@@ -62,8 +70,21 @@ export default function Dashboard({ apps, top5, totalUsedMb, totalRate, blkCnt, 
       </div>
 
       <div className={`${card} p-4.5 mb-5`}>
-        <div className={`${sectionLabel} mb-3.5`}>Total Usage — Last 24h</div>
-        <HistoryChart history={history} />
+        <div className="flex items-center justify-between mb-3.5">
+          <div className={sectionLabel}>Total Usage — Last {rangeLabel}</div>
+          <RadioGroup value={historyHours} onChange={onHistoryHoursChange} className="flex gap-1 bg-[var(--c-inset-bg)] rounded-lg p-0.5">
+            {RANGE_OPTIONS.map((r) => (
+              <Radio
+                key={r.hours}
+                value={r.hours}
+                className="px-2.5 py-1 rounded-md text-[11px] font-semibold uppercase tracking-wide cursor-pointer text-[color:var(--c-text-3)] data-checked:bg-blue-500/15 data-checked:text-blue-300"
+              >
+                {r.label}
+              </Radio>
+            ))}
+          </RadioGroup>
+        </div>
+        <HistoryChart history={history} rangeHours={historyHours} />
       </div>
 
       <div className={`${card} overflow-hidden`}>
