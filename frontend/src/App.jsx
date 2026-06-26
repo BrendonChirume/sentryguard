@@ -350,6 +350,10 @@ export default function App() {
                 history={history}
                 historyHours={historyHours}
                 onHistoryHoursChange={setHistoryHours}
+                globalUsage={globalUsage}
+                globalLimitMb={settings.globalLimitMb}
+                globalLimitPeriod={settings.globalLimitPeriod}
+                onUpdateSettings={updateSettings}
                 pollSeconds={settings.poll}
                 onAction={handleAction}
               />

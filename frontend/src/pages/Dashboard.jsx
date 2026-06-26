@@ -2,6 +2,7 @@ import { RadioGroup, Radio } from "@headlessui/react";
 import StatCard from "../components/StatCard";
 import HistoryChart from "../components/HistoryChart";
 import ProcessTable from "../components/ProcessTable";
+import GlobalLimitCard from "../components/GlobalLimitCard";
 import { formatBytes, formatSpeed } from "../lib/format";
 import { card, sectionLabel } from "../lib/ui";
 
@@ -11,7 +12,7 @@ const RANGE_OPTIONS = [
   { hours: 720, label: "30d" },
 ];
 
-export default function Dashboard({ apps, top5, totalUsedMb, totalRate, blkCnt, limCnt, history, historyHours, onHistoryHoursChange, pollSeconds, onAction }) {
+export default function Dashboard({ apps, top5, totalUsedMb, totalRate, blkCnt, limCnt, history, historyHours, onHistoryHoursChange, globalUsage, globalLimitMb, globalLimitPeriod, onUpdateSettings, pollSeconds, onAction }) {
   const rangeLabel = RANGE_OPTIONS.find((r) => r.hours === historyHours)?.label ?? "24h";
   return (
     <div>
@@ -19,6 +20,14 @@ export default function Dashboard({ apps, top5, totalUsedMb, totalRate, blkCnt, 
         <h1 className="text-xl font-bold text-[color:var(--c-text-1)] tracking-tight m-0">Dashboard</h1>
         <p className="text-[13px] text-[color:var(--c-text-3)] mt-1 mb-0">Real-time network usage overview</p>
       </div>
+
+      <GlobalLimitCard
+        totalMb={globalUsage?.total_mb ?? 0}
+        limitMb={globalLimitMb}
+        period={globalLimitPeriod}
+        periodStart={globalUsage?.period_start}
+        onUpdate={onUpdateSettings}
+      />
 
       <div className="grid grid-cols-4 gap-3.5 mb-5">
         <StatCard
