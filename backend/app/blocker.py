@@ -186,6 +186,11 @@ class BlockingPolicy:
             detail=f"limit={limit_mb}MB" if limit_mb is not None else "limit cleared",
         ))
 
+    def set_notify_muted(self, process_name: str, muted: bool) -> None:
+        rule = self._rules.get(process_name)
+        rule.notify_muted = muted
+        self._rules.set(rule)
+
     @staticmethod
     def _resolve_path(process_name: str, pid: int | None) -> str:
         if pid is not None:

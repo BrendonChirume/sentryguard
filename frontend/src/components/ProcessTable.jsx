@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { appColor, formatBytes, formatSpeed, statusBadgeClass } from "../lib/format";
+import { appColor, formatBytes, formatSpeed, statusBadgeClass, forecastStatus } from "../lib/format";
 import { th, td } from "../lib/ui";
 import ActionButtons from "./ActionButtons";
 
@@ -17,6 +17,21 @@ function SortIcon({ direction }) {
     <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className={`inline-block ml-1 transition-transform duration-150 ${direction === "desc" ? "rotate-180" : ""}`}>
       <polyline points="18 15 12 9 6 15" />
     </svg>
+  );
+}
+
+function ForecastBadge({ totalMb, limitMb }) {
+  const forecast = forecastStatus(totalMb, limitMb);
+  if (!forecast) return null;
+  return (
+    <span
+      title={forecast === "exceed" ? "On pace to exceed today's limit" : "On track to stay under today's limit"}
+      className={`px-1.5 py-[2px] rounded text-[10px] font-semibold tracking-wide uppercase inline-block ${
+        forecast === "exceed" ? "bg-red-500/10 text-red-500" : "bg-emerald-500/10 text-emerald-500"
+      }`}
+    >
+      {forecast === "exceed" ? "Will exceed" : "On track"}
+    </span>
   );
 }
 
@@ -81,7 +96,10 @@ export default function ProcessTable({ apps, onAction, limit }) {
               <td className={`${td} text-right`}><span className="font-mono text-[13px] text-[color:var(--c-text-2)]">{formatSpeed(p.speed)}</span></td>
               <td className={`${td} text-right`}><span className="font-mono text-[13px] text-[color:var(--c-text-2)]">{formatBytes(p.total_mb)}</span></td>
               <td className={`${td} text-center`}>
-                <span className={`px-2 py-[3px] rounded text-[11px] font-semibold tracking-wide uppercase inline-block ${statusBadgeClass(p.status)}`}>{p.status}</span>
+                <div className="flex items-center justify-center gap-1.5">
+                  <span className={`px-2 py-[3px] rounded text-[11px] font-semibold tracking-wide uppercase inline-block ${statusBadgeClass(p.status)}`}>{p.status}</span>
+                  <ForecastBadge totalMb={p.total_mb} limitMb={p.limitMb} />
+                </div>
               </td>
               <td className={td}><ActionButtons app={p} onAction={onAction} /></td>
             </tr>

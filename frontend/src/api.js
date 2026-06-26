@@ -65,6 +65,10 @@ export function unthrottleProcess(processName) {
   return postJson("/unthrottle", { process_name: processName });
 }
 
+export function setNotifyMuted(processName, muted) {
+  return postJson("/notify-mute", { process_name: processName, muted });
+}
+
 export async function deleteRule(processName) {
   const res = await fetch(`${BASE_URL}/rules/${encodeURIComponent(processName)}`, { method: "DELETE" });
   if (!res.ok) throw new Error(`delete rule failed: ${res.status}`);

@@ -104,6 +104,11 @@ class RuleRequest(BaseModel):
     throttle_kbps: float | None = None
 
 
+class NotifyMuteRequest(BaseModel):
+    process_name: str
+    muted: bool
+
+
 class NetworkDecisionRequest(BaseModel):
     network_id: str
     name: str
@@ -173,6 +178,12 @@ def upsert_rule(req: RuleRequest) -> dict:
 def delete_rule(process_name: str) -> dict:
     policy.delete_rule(process_name)
     return {"process_name": process_name, "deleted": True}
+
+
+@app.post("/notify-mute")
+def set_notify_muted(req: NotifyMuteRequest) -> dict:
+    policy.set_notify_muted(req.process_name, req.muted)
+    return {"process_name": req.process_name, "muted": req.muted}
 
 
 @app.post("/unthrottle")

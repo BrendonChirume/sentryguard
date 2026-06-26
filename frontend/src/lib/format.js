@@ -39,6 +39,15 @@ export function statusBadgeClass(status) {
   return map[status] || map.active;
 }
 
+export function forecastStatus(totalMb, limitMb) {
+  if (limitMb == null || limitMb <= 0) return null;
+  const now = new Date();
+  const secondsToday = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+  const fractionElapsed = Math.max(secondsToday / 86400, 0.02); // avoid a wild extrapolation right after midnight
+  const projectedMb = totalMb / fractionElapsed;
+  return projectedMb > limitMb ? "exceed" : "on-track";
+}
+
 export function ruleStatus(rule) {
   if (!rule) return "active";
   if (rule.blocked) return "blocked";

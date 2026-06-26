@@ -38,6 +38,7 @@ class BlockRule:
     category: str | None = None
     throttle_kbps: float | None = None  # speed cap to apply once limit_mb is hit, instead of blocking
     throttled: bool = False  # whether the throttle is currently in effect
+    notify_muted: bool = False  # suppress high-usage notifications for this process
 
 
 @dataclass
