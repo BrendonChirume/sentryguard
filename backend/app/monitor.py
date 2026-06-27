@@ -1,3 +1,4 @@
+import logging
 import socket
 import threading
 import time
@@ -9,6 +10,8 @@ import pydivert
 from app.models import ProcessUsage
 
 PORT_MAP_REFRESH_SECONDS = 2.0
+
+log = logging.getLogger(__name__)
 
 
 class NetworkMonitor:
@@ -79,12 +82,31 @@ class NetworkMonitor:
             self._usage.clear()
 
     def _run(self) -> None:
-        with pydivert.WinDivert(self._filter_str) as w:
-            for packet in w:
+        # WinDivert intercepts every matching packet system-wide and relies on us
+        # calling w.send() to put each one back on the wire. If a packet handler
+        # raises and we skip the send, or the whole capture loop dies, traffic
+        # stops flowing system-wide until the handle is closed (e.g. by killing
+        # the process) — that's the "no internet" failure this guards against.
+        while not self._stop_event.is_set():
+            try:
+                with pydivert.WinDivert(self._filter_str) as w:
+                    for packet in w:
+                        if self._stop_event.is_set():
+                            break
+                        try:
+                            self._handle_packet(packet)
+                        except Exception:
+                            log.exception("Error handling a captured packet; forwarding it unmodified")
+                        finally:
+                            try:
+                                w.send(packet)
+                            except Exception:
+                                log.exception("Failed to re-send a captured packet")
+            except Exception:
                 if self._stop_event.is_set():
                     break
-                self._handle_packet(packet)
-                w.send(packet)
+                log.exception("WinDivert capture loop crashed; restarting in 1s")
+                time.sleep(1)
 
     def _handle_packet(self, packet: pydivert.Packet) -> None:
         self._refresh_port_map_if_stale()
@@ -105,7 +127,7 @@ class NetworkMonitor:
             if usage is None:
                 try:
                     name = psutil.Process(pid).name()
-                except psutil.NoSuchProcess:
+                except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.Error):
                     name = f"pid:{pid}"
                 usage = ProcessUsage(pid=pid, name=name)
                 self._usage[pid] = usage
@@ -121,7 +143,13 @@ class NetworkMonitor:
             return
 
         new_map: dict[tuple[str, int], int] = {}
-        for conn in psutil.net_connections(kind="inet"):
+        try:
+            connections = psutil.net_connections(kind="inet")
+        except (psutil.AccessDenied, psutil.Error):
+            log.exception("Failed to list connections for the port map; keeping the previous map")
+            return
+
+        for conn in connections:
             if conn.pid is None or not conn.laddr:
                 continue
             proto = "tcp" if conn.type == 1 else "udp"

@@ -1,19 +1,31 @@
+import locale
 import re
 import socket
 import subprocess
+
+
+def _decode_console_output(raw: bytes) -> str:
+    """netsh's output encoding varies by system (UTF-8 on some, the OEM/ANSI
+    codepage on others) — decoding with the wrong one mangles non-ASCII
+    characters (e.g. a curly apostrophe in a device name) into mojibake."""
+    try:
+        return raw.decode("utf-8")
+    except UnicodeDecodeError:
+        return raw.decode(locale.getpreferredencoding(False), errors="replace")
 
 
 def _get_wifi_ssid() -> str | None:
     try:
         result = subprocess.run(
             ["netsh", "wlan", "show", "interfaces"],
-            capture_output=True, text=True, timeout=5,
+            capture_output=True, timeout=5,
         )
     except (OSError, subprocess.SubprocessError):
         return None
     if result.returncode != 0:
         return None
-    match = re.search(r"^\s*SSID\s*:\s*(.+)$", result.stdout, re.MULTILINE)
+    stdout = _decode_console_output(result.stdout)
+    match = re.search(r"^\s*SSID\s*:\s*(.+)$", stdout, re.MULTILINE)
     ssid = match.group(1).strip() if match else None
     return ssid or None
 

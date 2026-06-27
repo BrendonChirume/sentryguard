@@ -166,6 +166,12 @@ app.on("before-quit", () => {
 });
 
 ipcMain.on("notify", (_event, { title, body }) => {
+  // Skip the OS toast when the window already has focus — the in-app UI
+  // (e.g. a prompt modal) is already visible in that case, so a toast on
+  // top of it is redundant. Unfocused (minimized/background/other app in
+  // front) is exactly when the toast is needed to get the user's attention.
+  if (mainWindow?.isFocused()) return;
+
   const notification = new Notification({ title, body });
   notification.on("click", () => {
     if (!mainWindow) return;
