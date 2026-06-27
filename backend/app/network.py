@@ -30,12 +30,23 @@ def _get_wifi_ssid() -> str | None:
     return ssid or None
 
 
-def _get_local_subnet() -> str | None:
+def get_local_ip() -> str | None:
+    """Cheap, silent check for the locally-bound IP — a UDP "connect" never
+    actually sends a packet, it just does a routing-table lookup, so unlike
+    netsh wlan it doesn't trigger Windows' Wi-Fi/location indicator. Used to
+    detect *that* the network likely changed before paying for the more
+    expensive (and indicator-triggering) SSID lookup."""
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
             s.connect(("8.8.8.8", 80))
-            ip = s.getsockname()[0]
+            return s.getsockname()[0]
     except OSError:
+        return None
+
+
+def _get_local_subnet() -> str | None:
+    ip = get_local_ip()
+    if ip is None:
         return None
     parts = ip.split(".")
     if len(parts) != 4:

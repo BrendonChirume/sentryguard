@@ -12,7 +12,7 @@ from app.database import db
 from app.events import EventLogger
 from app.firewall import FirewallManager
 from app.monitor import NetworkMonitor
-from app.network import get_current_network
+from app.network import get_current_network, get_local_ip
 from app.throttle import ThrottleManager
 
 monitor = NetworkMonitor()
@@ -28,6 +28,7 @@ NETWORK_CHECK_INTERVAL_SECONDS = 15
 _current_network_id: str | None = None
 _current_network_name: str | None = None
 _network_limiting_enabled = True
+_last_local_ip: str | None = None
 
 
 async def _policy_loop() -> None:
@@ -50,15 +51,21 @@ async def _snapshot_loop() -> None:
 
 
 async def _network_loop() -> None:
-    global _current_network_id, _current_network_name, _network_limiting_enabled
+    global _current_network_id, _current_network_name, _network_limiting_enabled, _last_local_ip
     while True:
-        network_id, name = get_current_network()
-        if network_id != _current_network_id:
-            _current_network_id = network_id
-            _current_network_name = name
-            decision = db.get_network_decision(network_id)
-            # Default to limiting ON while a brand-new network awaits the user's decision.
-            _network_limiting_enabled = decision["limit_enabled"] if decision else True
+        # netsh wlan show interfaces (inside get_current_network) triggers Windows'
+        # Wi-Fi/location taskbar indicator on every call. Only pay for that once the
+        # cheap, silent local-IP check suggests the network actually changed.
+        local_ip = get_local_ip()
+        if local_ip != _last_local_ip:
+            _last_local_ip = local_ip
+            network_id, name = get_current_network()
+            if network_id != _current_network_id:
+                _current_network_id = network_id
+                _current_network_name = name
+                decision = db.get_network_decision(network_id)
+                # Default to limiting ON while a brand-new network awaits the user's decision.
+                _network_limiting_enabled = decision["limit_enabled"] if decision else True
         await asyncio.sleep(NETWORK_CHECK_INTERVAL_SECONDS)
 
 
