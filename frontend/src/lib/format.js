@@ -13,6 +13,25 @@ export function formatSpeed(bytesPerSec) {
   return kbps.toFixed(1) + " KB/s";
 }
 
+export function formatDuration(totalSeconds) {
+  const seconds = Math.round(totalSeconds);
+  const days = Math.floor(seconds / 86400);
+  const hours = Math.floor((seconds % 86400) / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  if (days > 0) return `${days}d ${hours}h left`;
+  if (hours > 0) return `${hours}h ${minutes}m left`;
+  if (minutes > 0) return `${minutes}m left`;
+  return "<1m left";
+}
+
+/** Estimated time until `remainingMb` of headroom runs out at the current rate, like a download's ETA. */
+export function estimateTimeLeft(remainingMb, bytesPerSec) {
+  if (remainingMb <= 0) return "Limit reached";
+  if (!bytesPerSec || bytesPerSec <= 0) return null;
+  const secondsLeft = (remainingMb * 1024 * 1024) / bytesPerSec;
+  return formatDuration(secondsLeft);
+}
+
 export function appColor(name) {
   let h = 5381;
   for (let i = 0; i < name.length; i++) h = ((h << 5) + h) ^ name.charCodeAt(i);

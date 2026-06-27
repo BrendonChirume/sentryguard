@@ -16,6 +16,7 @@ class ActionType(str, Enum):
 class ProcessUsage:
     pid: int
     name: str
+    description: str | None = None  # human-friendly app name (e.g. "Discord"), when resolvable
     bytes_sent: int = 0
     bytes_recv: int = 0
 

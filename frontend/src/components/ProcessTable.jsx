@@ -87,9 +87,14 @@ export default function ProcessTable({ apps, onAction, limit }) {
                     className="w-[30px] h-[30px] rounded-[7px] flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
                     style={{ background: appColor(p.name) }}
                   >
-                    {p.name.charAt(0).toUpperCase()}
+                    {(p.description || p.name).charAt(0).toUpperCase()}
                   </div>
-                  <span className="text-[13px] font-medium text-[color:var(--c-text-1)]">{p.name}</span>
+                  <div className="flex flex-col leading-tight">
+                    <span className="text-[13px] font-medium text-[color:var(--c-text-1)]">{p.description || p.name}</span>
+                    {p.description && (
+                      <span className="text-[11px] font-mono text-[color:var(--c-text-4)]">{p.name}</span>
+                    )}
+                  </div>
                 </div>
               </td>
               <td className={td}><span className="font-mono text-xs text-[color:var(--c-text-3)]">{p.pid}</span></td>

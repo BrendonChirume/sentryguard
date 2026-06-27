@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { DialogTitle } from "@headlessui/react";
 import { Listbox, ListboxButton, ListboxOption, ListboxOptions } from "@headlessui/react";
 import Modal from "./Modal";
 import { card, sectionLabel, inputStyle, label, btnPrimary, btnGhost, smBtnClass } from "../lib/ui";
-import { formatBytes } from "../lib/format";
+import { formatBytes, estimateTimeLeft } from "../lib/format";
 
 const PERIOD_OPTIONS = [
   { value: "daily", label: "Daily" },
@@ -12,6 +12,29 @@ const PERIOD_OPTIONS = [
 ];
 
 const PERIOD_NOUN = { daily: "Day", weekly: "Week", monthly: "Month" };
+
+/** Smooths a noisy live rate and only updates on a fixed, slow timer —
+ * decoupled from the ~2s poll cadence — so the "time left" estimate changes
+ * at most once every `intervalMs`, instead of jittering with every poll. */
+function useSmoothedRate(rate, { intervalMs = 10000, alpha = 0.2 } = {}) {
+  const latestRef = useRef(rate || 0);
+  const smoothedRef = useRef(rate || 0);
+  const [smoothed, setSmoothed] = useState(smoothedRef.current);
+
+  useEffect(() => {
+    latestRef.current = rate || 0;
+  }, [rate]);
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      smoothedRef.current += alpha * (latestRef.current - smoothedRef.current);
+      setSmoothed(smoothedRef.current);
+    }, intervalMs);
+    return () => clearInterval(id);
+  }, [intervalMs, alpha]);
+
+  return smoothed;
+}
 
 function periodEnd(periodStart, period) {
   const start = new Date(periodStart * 1000);
@@ -67,8 +90,9 @@ function EditLimitModal({ isOpen, onClose, initialMb, initialPeriod, onSave }) {
   );
 }
 
-export default function GlobalLimitCard({ totalMb, limitMb, period, periodStart, onUpdate }) {
+export default function GlobalLimitCard({ totalMb, limitMb, period, periodStart, ratePerSec, onUpdate }) {
   const [editOpen, setEditOpen] = useState(false);
+  const smoothedRate = useSmoothedRate(ratePerSec);
 
   const handleSave = (newLimitMb, newPeriod) => onUpdate({ globalLimitMb: newLimitMb, globalLimitPeriod: newPeriod });
   const handleRemove = () => onUpdate({ globalLimitMb: null });
@@ -91,6 +115,7 @@ export default function GlobalLimitCard({ totalMb, limitMb, period, periodStart,
   const daysLeft = periodStart != null
     ? Math.max(0, Math.ceil((periodEnd(periodStart, period) - Date.now()) / 86400000))
     : null;
+  const timeLeft = over ? null : estimateTimeLeft(limitMb - totalMb, smoothedRate);
 
   return (
     <div className={`${card} p-4.5 mb-5`}>
@@ -115,6 +140,11 @@ export default function GlobalLimitCard({ totalMb, limitMb, period, periodStart,
         </span>
         {daysLeft != null && <span>{daysLeft} day{daysLeft === 1 ? "" : "s"} until reset</span>}
       </div>
+      {timeLeft && (
+        <div className="text-xs text-[color:var(--c-text-3)] mt-1.5">
+          At this rate: <span className="text-[color:var(--c-text-2)] font-medium">{timeLeft}</span>
+        </div>
+      )}
       <EditLimitModal isOpen={editOpen} onClose={() => setEditOpen(false)} initialMb={limitMb} initialPeriod={period} onSave={handleSave} />
     </div>
   );

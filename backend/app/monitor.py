@@ -1,3 +1,4 @@
+import concurrent.futures
 import logging
 import socket
 import threading
@@ -7,11 +8,18 @@ from collections import defaultdict
 import psutil
 import pydivert
 
+from app.identify import get_app_description
 from app.models import ProcessUsage
 
 PORT_MAP_REFRESH_SECONDS = 2.0
 
 log = logging.getLogger(__name__)
+
+# Resolving a friendly app name shells out to PowerShell (slow, ~seconds on
+# a cold start). Doing that inline in the packet-handling hot path would
+# stall capture of every packet system-wide while it runs, so new processes
+# are resolved off-thread instead and the description fills in once ready.
+_description_executor = concurrent.futures.ThreadPoolExecutor(max_workers=2, thread_name_prefix="sentryguard-desc")
 
 
 class NetworkMonitor:
@@ -131,11 +139,25 @@ class NetworkMonitor:
                     name = f"pid:{pid}"
                 usage = ProcessUsage(pid=pid, name=name)
                 self._usage[pid] = usage
+                _description_executor.submit(self._resolve_description, pid)
 
             if packet.is_outbound:
                 usage.bytes_sent += size
             else:
                 usage.bytes_recv += size
+
+    def _resolve_description(self, pid: int) -> None:
+        try:
+            path = psutil.Process(pid).exe()
+        except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.Error):
+            return
+        description = get_app_description(path)
+        if not description:
+            return
+        with self._lock:
+            usage = self._usage.get(pid)
+            if usage is not None:
+                usage.description = description
 
     def _refresh_port_map_if_stale(self) -> None:
         now = time.monotonic()

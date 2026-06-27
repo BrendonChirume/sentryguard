@@ -4,7 +4,7 @@ contextBridge.exposeInMainWorld("sentryguard", {
   backendUrl: "http://127.0.0.1:8765",
   backendWsUrl: "ws://127.0.0.1:8765",
   notify: (title, body) => ipcRenderer.send("notify", { title, body }),
-  notifyHighUsage: (appName, totalMb) => ipcRenderer.send("notify-high-usage", { appName, totalMb }),
+  notifyHighUsage: (appName, totalMb, displayName) => ipcRenderer.send("notify-high-usage", { appName, totalMb, displayName }),
   onHighUsageIgnored: (callback) => {
     const listener = (_event, payload) => callback(payload);
     ipcRenderer.on("high-usage-ignored", listener);

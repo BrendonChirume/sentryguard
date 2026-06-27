@@ -134,6 +134,7 @@ def _usage_payload() -> list[dict]:
         {
             "pid": u.pid,
             "name": u.name,
+            "description": u.description,
             "bytes_sent": u.bytes_sent,
             "bytes_recv": u.bytes_recv,
             "total_mb": round(u.total_mb, 3),

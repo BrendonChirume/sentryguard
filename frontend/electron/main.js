@@ -181,16 +181,16 @@ ipcMain.on("notify", (_event, { title, body }) => {
   notification.show();
 });
 
-ipcMain.on("notify-high-usage", (_event, { appName, totalMb }) => {
+ipcMain.on("notify-high-usage", (_event, { appName, totalMb, displayName }) => {
   if (!Notification.isSupported()) {
-    mainWindow?.webContents.send("high-usage-ignored", { appName, totalMb });
+    mainWindow?.webContents.send("high-usage-ignored", { appName, totalMb, displayName });
     return;
   }
 
   let clicked = false;
   const notification = new Notification({
     title: "SentryGuard — High Data Usage",
-    body: `${appName} is using a lot of data. Click to review.`,
+    body: `${displayName || appName} is using a lot of data. Click to review.`,
   });
 
   notification.on("click", () => {
@@ -200,7 +200,7 @@ ipcMain.on("notify-high-usage", (_event, { appName, totalMb }) => {
   });
 
   notification.on("close", () => {
-    if (!clicked) mainWindow?.webContents.send("high-usage-ignored", { appName, totalMb });
+    if (!clicked) mainWindow?.webContents.send("high-usage-ignored", { appName, totalMb, displayName });
   });
 
   notification.show();

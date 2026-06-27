@@ -6,11 +6,17 @@ import { card, sectionLabel, inputStyle, label, btnPrimary, btnGhost, btnDanger 
 function ProcessNameField({ value, apps, onChange }) {
   const [query, setQuery] = useState("");
 
+  const descriptionByName = useMemo(() => {
+    const map = new Map();
+    for (const a of apps) if (a.description) map.set(a.name, a.description);
+    return map;
+  }, [apps]);
+
   const processNames = useMemo(() => {
     const names = [...new Set(apps.map((a) => a.name))].sort((a, b) => a.localeCompare(b));
     if (!query) return names;
-    return names.filter((n) => n.toLowerCase().includes(query.toLowerCase()));
-  }, [apps, query]);
+    return names.filter((n) => n.toLowerCase().includes(query.toLowerCase()) || descriptionByName.get(n)?.toLowerCase().includes(query.toLowerCase()));
+  }, [apps, query, descriptionByName]);
 
   return (
     <Combobox value={value} onChange={(v) => v != null && onChange(v)} onClose={() => setQuery("")}>
@@ -35,9 +41,16 @@ function ProcessNameField({ value, apps, onChange }) {
             <ComboboxOption
               key={name}
               value={name}
-              className="px-3 py-2 rounded-lg text-[13px] font-mono text-[color:var(--c-text-1)] cursor-pointer data-focus:bg-[var(--c-surface-3)] data-selected:text-blue-400"
+              className="px-3 py-2 rounded-lg text-[13px] text-[color:var(--c-text-1)] cursor-pointer data-focus:bg-[var(--c-surface-3)] data-selected:text-blue-400"
             >
-              {name}
+              {descriptionByName.has(name) ? (
+                <span className="flex flex-col leading-tight">
+                  <span>{descriptionByName.get(name)}</span>
+                  <span className="text-[11px] font-mono text-[color:var(--c-text-4)]">{name}</span>
+                </span>
+              ) : (
+                <span className="font-mono">{name}</span>
+              )}
             </ComboboxOption>
           ))}
           {processNames.length === 0 && (
@@ -80,6 +93,12 @@ function ActionField({ value, onChange }) {
 }
 
 export default function Rules({ rules, apps, newRule, onNewRuleChange, addRuleOpen, onToggleAddRule, onAddRule, onDeleteRule }) {
+  const descriptionByName = useMemo(() => {
+    const map = new Map();
+    for (const a of apps) if (a.description) map.set(a.name, a.description);
+    return map;
+  }, [apps]);
+
   return (
     <div className="max-w-[820px]">
       <div className="flex items-start justify-between mb-6">
@@ -148,7 +167,14 @@ export default function Rules({ rules, apps, newRule, onNewRuleChange, addRuleOp
             <div key={r.process_name} className={`${card} px-5 py-4 flex items-center gap-3.5`}>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap mb-1">
-                  <span className="font-mono text-[13px] font-medium text-[color:var(--c-text-1)]">{r.process_name}</span>
+                  {descriptionByName.has(r.process_name) ? (
+                    <span className="flex items-baseline gap-1.5">
+                      <span className="text-[13px] font-medium text-[color:var(--c-text-1)]">{descriptionByName.get(r.process_name)}</span>
+                      <span className="font-mono text-[11px] text-[color:var(--c-text-4)]">{r.process_name}</span>
+                    </span>
+                  ) : (
+                    <span className="font-mono text-[13px] font-medium text-[color:var(--c-text-1)]">{r.process_name}</span>
+                  )}
                   <span className={`px-1.5 py-0.5 rounded text-[11px] font-semibold tracking-wide uppercase inline-block ${statusBadgeClass(status)}`}>
                     {r.blocked ? "block" : status === "throttled" ? "throttled" : status === "scheduled" ? "scheduled limit" : "limit"}
                   </span>

@@ -61,6 +61,7 @@ export default function App() {
   const notifiedNetworkRef = useRef(null);
   const notifiedHighUsageRef = useRef(new Set());
   const notifiedGlobalLimitRef = useRef(null);
+  const appsRef = useRef([]);
 
   useEffect(() => {
     fetchSettings().then(res => {
@@ -96,6 +97,10 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    appsRef.current = apps;
+  }, [apps]);
+
+  useEffect(() => {
     const refresh = () => {
       fetchRules().then(setRules).catch(console.error);
       fetchEvents().then(list => {
@@ -105,7 +110,8 @@ export default function App() {
           const newOnes = list.filter(e => e.timestamp > lastEventTsRef.current);
           for (const e of newOnes) {
             if (e.action === "auto_block") {
-              window.sentryguard?.notify?.("SentryGuard — Auto-blocked", `${e.process_name}: ${e.detail}`);
+              const displayName = appsRef.current.find(a => a.name === e.process_name)?.description || e.process_name;
+              window.sentryguard?.notify?.("SentryGuard — Auto-blocked", `${displayName}: ${e.detail}`);
             }
           }
           if (newOnes.length) {
@@ -171,13 +177,13 @@ export default function App() {
     if (candidates.length === 0) return;
     for (const app of candidates) {
       notifiedHighUsageRef.current.add(app.name);
-      window.sentryguard?.notifyHighUsage?.(app.name, app.total_mb);
+      window.sentryguard?.notifyHighUsage?.(app.name, app.total_mb, app.description);
     }
   }, [appsWithStatus, settings.autoThresh]);
 
   useEffect(() => {
-    const unsub = window.sentryguard?.onHighUsageIgnored?.(({ appName, totalMb }) => {
-      setHighUsageQueue((q) => [...q, { name: appName, totalMb }]);
+    const unsub = window.sentryguard?.onHighUsageIgnored?.(({ appName, totalMb, displayName }) => {
+      setHighUsageQueue((q) => [...q, { name: appName, totalMb, displayName }]);
     });
     return unsub;
   }, []);
@@ -397,7 +403,7 @@ export default function App() {
       />
       <HighUsagePromptModal
         isOpen={highUsageQueue.length > 0}
-        appName={highUsageQueue[0]?.name}
+        appName={highUsageQueue[0]?.displayName || highUsageQueue[0]?.name}
         totalMb={highUsageQueue[0]?.totalMb}
         thresholdMb={settings.autoThresh}
         onLimit={handleLimitHighUsageApp}
