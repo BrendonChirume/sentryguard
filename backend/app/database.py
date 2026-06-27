@@ -100,6 +100,7 @@ class Database:
             self.set_setting("start_bk", "true")
             self.set_setting("global_limit_mb", "")
             self.set_setting("global_limit_period", "weekly")
+            self.set_setting("auto_throttle_kbps", "100.0")
 
     # -- Rules --
     def get_all_rules(self) -> list[BlockRule]:

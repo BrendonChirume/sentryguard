@@ -62,12 +62,25 @@ export default function Settings({ settings, onUpdate, networkStatus }) {
         <div className={`${card} px-5 py-4.5`}>
           <div className="flex items-center justify-between gap-5">
             <div>
-              <div className="text-sm font-medium text-[color:var(--c-text-1)]">Auto-block Threshold</div>
-              <div className="text-xs text-[color:var(--c-text-3)] mt-0.5">Block apps exceeding this daily usage</div>
+              <div className="text-sm font-medium text-[color:var(--c-text-1)]">Auto-limit Threshold</div>
+              <div className="text-xs text-[color:var(--c-text-3)] mt-0.5">Throttle apps exceeding this daily usage (apps with no manual rule never get hard-blocked automatically)</div>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
               <input type="number" min="0" max="10000" value={settings.autoThresh} onChange={(e) => onUpdate({ autoThresh: Number(e.target.value) || 100 })} className={`${numberFieldClass} w-[78px]`} />
               <span className="text-[13px] text-[color:var(--c-text-3)]">MB</span>
+            </div>
+          </div>
+        </div>
+
+        <div className={`${card} px-5 py-4.5`}>
+          <div className="flex items-center justify-between gap-5">
+            <div>
+              <div className="text-sm font-medium text-[color:var(--c-text-1)]">Auto-limit Speed</div>
+              <div className="text-xs text-[color:var(--c-text-3)] mt-0.5">Speed cap applied once the auto-limit threshold is hit</div>
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <input type="number" min="1" max="100000" value={settings.autoThrottleKbps} onChange={(e) => onUpdate({ autoThrottleKbps: Number(e.target.value) || 100 })} className={`${numberFieldClass} w-[78px]`} />
+              <span className="text-[13px] text-[color:var(--c-text-3)]">KB/s</span>
             </div>
           </div>
         </div>

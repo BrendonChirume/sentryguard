@@ -44,7 +44,7 @@ export default function App() {
 
   const [search, setSearch] = useState("");
   const [appFilter, setAppFilter] = useState("all");
-  const [settings, setSettings] = useState({ poll: 2, autoThresh: 500, startWin: false, startBk: true, globalLimitMb: null, globalLimitPeriod: "weekly" });
+  const [settings, setSettings] = useState({ poll: 2, autoThresh: 500, startWin: false, startBk: true, globalLimitMb: null, globalLimitPeriod: "weekly", autoThrottleKbps: 100 });
   const [globalUsage, setGlobalUsage] = useState(null);
   const [globalLimitPrompt, setGlobalLimitPrompt] = useState(null);
 
@@ -72,6 +72,7 @@ export default function App() {
         startBk: res.start_bk === "true",
         globalLimitMb: res.global_limit_mb ? Number(res.global_limit_mb) : null,
         globalLimitPeriod: res.global_limit_period || "weekly",
+        autoThrottleKbps: Number(res.auto_throttle_kbps) || 100,
       });
     }).catch(console.error);
   }, []);
@@ -266,6 +267,7 @@ export default function App() {
       start_bk: String(next.startBk),
       global_limit_mb: next.globalLimitMb ? String(next.globalLimitMb) : "",
       global_limit_period: next.globalLimitPeriod,
+      auto_throttle_kbps: String(next.autoThrottleKbps),
     }).catch(console.error);
   };
 

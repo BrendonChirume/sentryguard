@@ -123,6 +123,7 @@ class SettingsRequest(BaseModel):
     start_bk: str
     global_limit_mb: str
     global_limit_period: str
+    auto_throttle_kbps: str
 
 
 class ThrottleAllRequest(BaseModel):
@@ -263,6 +264,7 @@ def get_settings() -> dict:
         "start_bk": db.get_setting("start_bk") or "true",
         "global_limit_mb": db.get_setting("global_limit_mb") or "",
         "global_limit_period": db.get_setting("global_limit_period") or "weekly",
+        "auto_throttle_kbps": db.get_setting("auto_throttle_kbps") or "100.0",
     }
 
 
@@ -274,6 +276,7 @@ def save_settings(req: SettingsRequest) -> dict:
     db.set_setting("start_bk", req.start_bk)
     db.set_setting("global_limit_mb", req.global_limit_mb)
     db.set_setting("global_limit_period", req.global_limit_period)
+    db.set_setting("auto_throttle_kbps", req.auto_throttle_kbps)
     return {"status": "ok"}
 
 

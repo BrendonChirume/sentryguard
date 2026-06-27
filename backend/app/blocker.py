@@ -48,13 +48,21 @@ class BlockingPolicy:
         self._throttle = throttle
 
     def evaluate(self, usages: list[ProcessUsage], network_limiting_enabled: bool = True) -> None:
-        """Applies manual rules (always) and the global auto-block threshold
+        """Applies manual rules (always) and the global auto-limit threshold
         (only when network_limiting_enabled — e.g. the user opted out of
-        standard limiting for the currently connected network)."""
+        standard limiting for the currently connected network).
+
+        The global threshold throttles rather than blocks outright — only an
+        explicit "Block" rule (set manually, or a limit rule with no throttle
+        speed configured) results in a hard firewall block."""
         try:
-            auto_block_threshold_mb = float(db.get_setting("auto_thresh") or 500.0)
+            auto_threshold_mb = float(db.get_setting("auto_thresh") or 500.0)
         except ValueError:
-            auto_block_threshold_mb = 500.0
+            auto_threshold_mb = 500.0
+        try:
+            auto_throttle_kbps = float(db.get_setting("auto_throttle_kbps") or 100.0)
+        except ValueError:
+            auto_throttle_kbps = 100.0
 
         for usage in usages:
             rule = self._rules.get(usage.name)
@@ -63,17 +71,23 @@ class BlockingPolicy:
             if not self._in_window(rule):
                 continue
 
-            if rule.limit_mb is not None:
+            has_explicit_rule = rule.limit_mb is not None
+            if has_explicit_rule:
                 limit = rule.limit_mb
             elif network_limiting_enabled:
-                limit = auto_block_threshold_mb
+                limit = auto_threshold_mb
             else:
                 continue  # no explicit rule, and standard limiting is off for this network
 
             if usage.total_mb < limit:
                 continue
 
-            if rule.throttle_kbps is not None:
+            if not has_explicit_rule:
+                # No manual rule — the global threshold limits speed, it never blocks outright.
+                if not rule.throttled:
+                    self.throttle_process(usage.name, usage.pid, auto_throttle_kbps, auto=True,
+                                           detail=f"{usage.total_mb:.1f} MB >= {limit} MB (global threshold)")
+            elif rule.throttle_kbps is not None:
                 if not rule.throttled:
                     self.throttle_process(usage.name, usage.pid, rule.throttle_kbps, auto=True,
                                            detail=f"{usage.total_mb:.1f} MB >= {limit} MB")
