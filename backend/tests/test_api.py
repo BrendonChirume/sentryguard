@@ -21,6 +21,11 @@ def make_client(monkeypatch, tmp_path):
     )
     monkeypatch.setattr(api.monitor, "start", lambda: None)
     monkeypatch.setattr(api.monitor, "stop", lambda: None)
+    monkeypatch.setattr(api.throttle, "remove_all", lambda: None)
+    monkeypatch.setattr(
+        api.BlockingPolicy, "_resolve_path",
+        staticmethod(lambda process_name, pid: process_name),
+    )
     return TestClient(api.app)
 
 

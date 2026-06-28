@@ -9,6 +9,10 @@ from app.models import ActionType, BlockRule, Event, ProcessUsage
 from app.throttle import ThrottleManager
 
 
+class ProcessPathUnresolvedError(RuntimeError):
+    pass
+
+
 class RuleStore:
     """Persists manual block/limit rules via SQLite."""
 
@@ -139,7 +143,10 @@ class BlockingPolicy:
         return now >= rule.start_time or now <= rule.end_time  # window spans midnight
 
     def block(self, process_name: str, pid: int | None = None, auto: bool = False, detail: str = "") -> None:
-        process_path = self._resolve_path(process_name, pid)
+        try:
+            process_path = self._resolve_path(process_name, pid)
+        except ProcessPathUnresolvedError:
+            return
         self._firewall.block(process_path, process_name)
 
         rule = self._rules.get(process_name)
@@ -155,7 +162,10 @@ class BlockingPolicy:
     def throttle_process(
         self, process_name: str, pid: int | None, kbps: float, auto: bool = False, detail: str = ""
     ) -> None:
-        process_path = self._resolve_path(process_name, pid)
+        try:
+            process_path = self._resolve_path(process_name, pid)
+        except ProcessPathUnresolvedError:
+            return
         self._throttle.throttle(process_path, process_name, kbps)
 
         rule = self._rules.get(process_name)
@@ -253,4 +263,7 @@ class BlockingPolicy:
         for proc in psutil.process_iter(["name", "exe"]):
             if proc.info["name"] == process_name and proc.info["exe"]:
                 return proc.info["exe"]
-        return process_name
+        raise ProcessPathUnresolvedError(
+            f"could not resolve an executable path for {process_name!r} "
+            "(process may have already exited)"
+        )

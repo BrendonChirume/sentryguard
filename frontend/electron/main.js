@@ -11,12 +11,11 @@ const isDev = process.env.NODE_ENV === "development";
 
 const TRAY_ICON_PATH = path.join(__dirname, "tray-icon.png");
 const APP_ICON_PATH = path.join(__dirname, "app-icon.png");
-const BACKEND_EXE_PATH = path.join(process.resourcesPath, "backend", "sentryguard-backend.exe");
+const BACKEND_TASK_NAME = "SentryGuardBackend";
 
 let mainWindow = null;
 let tray = null;
 let isQuitting = false;
-let backendProcess = null;
 
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
@@ -46,42 +45,20 @@ function applyCsp() {
 
 function startBackend() {
   // In dev, the developer runs `python -m app.main` from backend/ themselves.
-  // In production, the bundled exe (frozen via PyInstaller) ships alongside the app.
+  // In production, the backend runs as a Scheduled Task created at install
+  // time (RunLevel=Highest), not as a child of this process. That keeps the
+  // Electron app itself unelevated — running the whole app as admin broke
+  // Windows toast-notification activation (UIPI blocks Action Center from
+  // messaging an elevated window, so clicking a notification just relaunched
+  // the app via UAC instead of focusing the existing one). Only the backend
+  // needs admin, for the netsh/QoS calls.
   if (isDev) return;
-
-  const logPath = path.join(app.getPath("userData"), "backend.log");
-  const logStream = fs.createWriteStream(logPath, { flags: "a" });
-  const timestamp = new Date().toISOString();
-  logStream.write(`\n--- SentryGuard backend starting ${timestamp} ---\n`);
-  logStream.write(`exe: ${BACKEND_EXE_PATH}\n`);
-  logStream.write(`exists: ${fs.existsSync(BACKEND_EXE_PATH)}\n`);
-
-  if (!fs.existsSync(BACKEND_EXE_PATH)) {
-    logStream.write("Backend exe not found at expected path, aborting spawn.\n");
-    return;
-  }
-
-  backendProcess = spawn(BACKEND_EXE_PATH, [], {
-    env: { ...process.env, SENTRYGUARD_DATA_DIR: app.getPath("userData") },
-    windowsHide: true,
-  });
-
-  backendProcess.stdout?.pipe(logStream, { end: false });
-  backendProcess.stderr?.pipe(logStream, { end: false });
-
-  backendProcess.on("error", (err) => {
-    logStream.write(`spawn error: ${err.stack || err}\n`);
-  });
-
-  backendProcess.on("exit", (code, signal) => {
-    logStream.write(`backend exited: code=${code} signal=${signal}\n`);
-  });
+  spawn("schtasks", ["/run", "/tn", BACKEND_TASK_NAME], { windowsHide: true });
 }
 
 function stopBackend() {
-  if (!backendProcess) return;
-  backendProcess.kill();
-  backendProcess = null;
+  if (isDev) return;
+  spawn("schtasks", ["/end", "/tn", BACKEND_TASK_NAME], { windowsHide: true });
 }
 
 function createWindow() {
