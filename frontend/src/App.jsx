@@ -239,7 +239,13 @@ export default function App() {
       unthrottleProcess(app.name).then(() => fetchRules().then(setRules));
     } else if (action === "limit") {
       const rule = rulesMap.get(app.name);
-      setModal({ appName: app.name, limit: rule?.limit_mb ?? null, throttleKbps: rule?.throttle_kbps ?? null });
+      setModal({
+        appName: app.name,
+        limit: rule?.limit_mb ?? null,
+        throttleKbps: rule?.throttle_kbps ?? null,
+        targetMb: rule?.target_mb ?? null,
+        ssids: rule?.ssids ?? [],
+      });
     } else if (action === "inspect") {
       fetchConnections(app.name).then(res => setInspectorModal({ appName: app.name, connections: res })).catch(console.error);
     } else if (action === "mute" || action === "unmute") {
@@ -247,7 +253,7 @@ export default function App() {
     }
   };
 
-  const handleSaveLimit = (name, { limitMb, throttleKbps }) => {
+  const handleSaveLimit = (name, { limitMb, throttleKbps, targetMb, ssids }) => {
     const rule = rulesMap.get(name);
     saveRule({
       process_name: name,
@@ -256,6 +262,8 @@ export default function App() {
       end_time: rule?.end_time ?? null,
       category: rule?.category ?? null,
       throttle_kbps: throttleKbps,
+      target_mb: targetMb,
+      ssids: ssids ?? [],
     }).then(() => fetchRules().then(setRules));
   };
 
@@ -395,7 +403,17 @@ export default function App() {
         </div>
       </div>
 
-      <LimitModal isOpen={modal !== null} appName={modal?.appName} currentLimit={modal?.limit} currentThrottle={modal?.throttleKbps} onClose={() => setModal(null)} onSave={handleSaveLimit} />
+      <LimitModal
+        isOpen={modal !== null}
+        appName={modal?.appName}
+        currentLimit={modal?.limit}
+        currentThrottle={modal?.throttleKbps}
+        currentTarget={modal?.targetMb}
+        currentSsids={modal?.ssids}
+        currentNetwork={networkStatus?.network_id ? { id: networkStatus.network_id, name: networkStatus.name } : null}
+        onClose={() => setModal(null)}
+        onSave={handleSaveLimit}
+      />
       <ConnectionModal isOpen={inspectorModal !== null} appName={inspectorModal?.appName} connections={inspectorModal?.connections} onClose={() => setInspectorModal(null)} />
       <NetworkPromptModal
         isOpen={networkPromptOpen}

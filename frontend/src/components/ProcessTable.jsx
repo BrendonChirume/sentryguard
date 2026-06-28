@@ -36,8 +36,8 @@ function ForecastBadge({ totalMb, limitMb }) {
 }
 
 export default function ProcessTable({ apps, onAction, limit }) {
-  const [sortKey, setSortKey] = useState(null);
-  const [sortDir, setSortDir] = useState("asc");
+  const [sortKey, setSortKey] = useState("total_mb");
+  const [sortDir, setSortDir] = useState("desc");
 
   const sorted = useMemo(() => {
     if (!sortKey) return apps;
