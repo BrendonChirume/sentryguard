@@ -18,6 +18,17 @@ let tray = null;
 let isQuitting = false;
 let backendProcess = null;
 
+const gotLock = app.requestSingleInstanceLock();
+if (!gotLock) {
+  app.quit();
+}
+
+app.on("second-instance", () => {
+  if (!mainWindow) return;
+  mainWindow.show();
+  mainWindow.focus();
+});
+
 const CSP = isDev
   ? "default-src 'self' http://localhost:5173 ws://localhost:5173 http://127.0.0.1:8765 ws://127.0.0.1:8765; script-src 'self' 'unsafe-eval' 'unsafe-inline' http://localhost:5173; style-src 'self' 'unsafe-inline' http://localhost:5173"
   : "default-src 'self' http://127.0.0.1:8765 ws://127.0.0.1:8765; script-src 'self'; style-src 'self' 'unsafe-inline'";
@@ -129,13 +140,23 @@ function createTray() {
   tray.on("click", showWindow);
 }
 
+function sendUpdateStatus(status, extra = {}) {
+  mainWindow?.webContents.send("update-status", { status, ...extra });
+}
+
 function setupAutoUpdate() {
   if (isDev) return;
 
   autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = true;
 
+  autoUpdater.on("checking-for-update", () => sendUpdateStatus("checking"));
+  autoUpdater.on("update-available", (info) => sendUpdateStatus("available", { version: info.version }));
+  autoUpdater.on("update-not-available", () => sendUpdateStatus("not-available"));
+  autoUpdater.on("download-progress", (progress) => sendUpdateStatus("downloading", { percent: progress.percent }));
+
   autoUpdater.on("update-downloaded", (info) => {
+    sendUpdateStatus("downloaded", { version: info.version });
     new Notification({
       title: "SentryGuard update ready",
       body: `Version ${info.version} will install the next time the app restarts.`,
@@ -145,6 +166,7 @@ function setupAutoUpdate() {
   autoUpdater.on("error", (err) => {
     const logPath = path.join(app.getPath("userData"), "backend.log");
     fs.appendFileSync(logPath, `\nautoUpdater error: ${err.stack || err}\n`);
+    sendUpdateStatus("error", { message: err.message || String(err) });
   });
 
   autoUpdater.checkForUpdates().catch(() => {});
@@ -243,6 +265,20 @@ ipcMain.on("window-maximize", () => {
 
 ipcMain.on("window-close", () => {
   mainWindow?.close();
+});
+
+ipcMain.handle("get-app-version", () => app.getVersion());
+
+ipcMain.handle("check-for-updates", async () => {
+  if (isDev) {
+    return { status: "not-available", devMode: true };
+  }
+  try {
+    const result = await autoUpdater.checkForUpdates();
+    return { status: "checking", version: result?.updateInfo?.version };
+  } catch (err) {
+    return { status: "error", message: err.message || String(err) };
+  }
 });
 
 app.on("window-all-closed", () => {

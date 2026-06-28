@@ -40,6 +40,8 @@ class BlockRule:
     throttle_kbps: float | None = None  # speed cap to apply once limit_mb is hit, instead of blocking
     throttled: bool = False  # whether the throttle is currently in effect
     notify_muted: bool = False  # suppress high-usage notifications for this process
+    ssids: list[str] = field(default_factory=list)  # network_ids (e.g. "wifi:Home") this rule applies to; empty = all networks
+    target_mb: float | None = None  # daily data budget to auto-pace toward via proportional throttling
 
 
 @dataclass

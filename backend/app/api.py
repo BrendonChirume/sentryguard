@@ -24,6 +24,7 @@ policy = BlockingPolicy(firewall, rules, events, throttle)
 
 SNAPSHOT_INTERVAL_SECONDS = 300
 NETWORK_CHECK_INTERVAL_SECONDS = 15
+PACING_INTERVAL_SECONDS = 60
 
 _current_network_id: str | None = None
 _current_network_name: str | None = None
@@ -39,7 +40,13 @@ async def _policy_loop() -> None:
             poll_interval = 2.0
 
         await asyncio.sleep(poll_interval)
-        policy.evaluate(monitor.snapshot(), _network_limiting_enabled)
+        policy.evaluate(monitor.snapshot(), _network_limiting_enabled, _current_network_id)
+
+
+async def _pacing_loop() -> None:
+    while True:
+        await asyncio.sleep(PACING_INTERVAL_SECONDS)
+        policy.apply_target_pacing(monitor.snapshot(), _current_network_id)
 
 
 async def _snapshot_loop() -> None:
@@ -75,12 +82,14 @@ async def lifespan(app: FastAPI):
     policy_task = asyncio.create_task(_policy_loop())
     snapshot_task = asyncio.create_task(_snapshot_loop())
     network_task = asyncio.create_task(_network_loop())
+    pacing_task = asyncio.create_task(_pacing_loop())
     try:
         yield
     finally:
         policy_task.cancel()
         snapshot_task.cancel()
         network_task.cancel()
+        pacing_task.cancel()
         monitor.stop()
 
 
@@ -110,6 +119,8 @@ class RuleRequest(BaseModel):
     end_time: str | None = None
     category: str | None = None
     throttle_kbps: float | None = None
+    ssids: list[str] = []
+    target_mb: float | None = None
 
 
 class NotifyMuteRequest(BaseModel):
@@ -186,7 +197,10 @@ def set_limit(req: LimitRequest) -> dict:
 
 @app.post("/rules")
 def upsert_rule(req: RuleRequest) -> dict:
-    policy.set_rule(req.process_name, req.limit_mb, req.start_time, req.end_time, req.category, req.throttle_kbps)
+    policy.set_rule(
+        req.process_name, req.limit_mb, req.start_time, req.end_time, req.category, req.throttle_kbps,
+        ssids=req.ssids, target_mb=req.target_mb,
+    )
     return {"process_name": req.process_name}
 
 

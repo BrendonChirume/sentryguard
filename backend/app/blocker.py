@@ -47,7 +47,10 @@ class BlockingPolicy:
         self._events = events
         self._throttle = throttle
 
-    def evaluate(self, usages: list[ProcessUsage], network_limiting_enabled: bool = True) -> None:
+    def evaluate(
+        self, usages: list[ProcessUsage], network_limiting_enabled: bool = True,
+        current_network_id: str | None = None,
+    ) -> None:
         """Applies manual rules (always) and the global auto-limit threshold
         (only when network_limiting_enabled — e.g. the user opted out of
         standard limiting for the currently connected network).
@@ -70,10 +73,12 @@ class BlockingPolicy:
                 continue
             if not self._in_window(rule):
                 continue
+            if rule.ssids and current_network_id not in rule.ssids:
+                continue
 
-            has_explicit_rule = rule.limit_mb is not None
+            has_explicit_rule = rule.limit_mb is not None or rule.throttle_kbps is not None
             if has_explicit_rule:
-                limit = rule.limit_mb
+                limit = rule.limit_mb if rule.limit_mb is not None else 0
             elif network_limiting_enabled:
                 limit = auto_threshold_mb
             else:
@@ -93,6 +98,35 @@ class BlockingPolicy:
                                            detail=f"{usage.total_mb:.1f} MB >= {limit} MB")
             else:
                 self.block(usage.name, usage.pid, auto=True, detail=f"{usage.total_mb:.1f} MB >= {limit} MB")
+
+    def apply_target_pacing(self, usages: list[ProcessUsage], current_network_id: str | None = None) -> None:
+        """For rules with a daily `target_mb` budget, recomputes a throttle rate
+        that would land usage right at the target by end of day, proportional to
+        how far ahead/behind pace the process currently is. If it's already over
+        budget — throttling alone can no longer bring it back under target by
+        midnight — it blocks instead."""
+        now = datetime.now()
+        seconds_elapsed = now.hour * 3600 + now.minute * 60 + now.second
+        seconds_remaining = 86400 - seconds_elapsed
+        if seconds_remaining <= 0:
+            return
+
+        for usage in usages:
+            rule = self._rules.get(usage.name)
+            if rule.target_mb is None or rule.blocked:
+                continue
+            if rule.ssids and current_network_id not in rule.ssids:
+                continue
+
+            remaining_mb = rule.target_mb - usage.total_mb
+            if remaining_mb <= 0:
+                self.block(usage.name, usage.pid, auto=True,
+                           detail=f"{usage.total_mb:.1f} MB already over {rule.target_mb} MB daily target")
+                continue
+
+            allowed_kbps = (remaining_mb * 1024 * 8) / seconds_remaining
+            self.throttle_process(usage.name, usage.pid, allowed_kbps, auto=True,
+                                   detail=f"pacing toward {rule.target_mb} MB/day target ({allowed_kbps:.1f} KB/s)")
 
     @staticmethod
     def _in_window(rule: BlockRule) -> bool:
@@ -160,6 +194,8 @@ class BlockingPolicy:
         end_time: str | None,
         category: str | None,
         throttle_kbps: float | None = None,
+        ssids: list[str] | None = None,
+        target_mb: float | None = None,
     ) -> None:
         rule = self._rules.get(process_name)
         rule.limit_mb = limit_mb
@@ -167,6 +203,8 @@ class BlockingPolicy:
         rule.end_time = end_time
         rule.category = category
         rule.throttle_kbps = throttle_kbps
+        rule.ssids = ssids or []
+        rule.target_mb = target_mb
         if throttle_kbps is None and rule.throttled:
             # Throttle config was removed/cleared — drop the active QoS policy too.
             self._throttle.unthrottle(process_name)
