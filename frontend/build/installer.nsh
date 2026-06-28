@@ -7,7 +7,11 @@
   ; here while the installer itself is already elevated) instead of as an
   ; Electron child process. Electron just does `schtasks /run` to start it.
   DetailPrint "Registering SentryGuard backend service task..."
-  nsExec::Exec 'schtasks /create /tn "SentryGuardBackend" /tr "\"$INSTDIR\resources\backend\sentryguard-backend.exe\" --data-dir \"$PROGRAMDATA\SentryGuard\"" /sc onlogon /rl highest /f'
+  ; $PROGRAMDATA isn't a built-in NSIS variable — $APPDATA resolves to the
+  ; machine-wide ProgramData folder once SetShellVarContext is "all" (which
+  ; it is here, since this perMachine install is already elevated).
+  SetShellVarContext all
+  nsExec::Exec 'schtasks /create /tn "SentryGuardBackend" /tr "\"$INSTDIR\resources\backend\sentryguard-backend.exe\" --data-dir \"$APPDATA\SentryGuard\"" /sc onlogon /rl highest /f'
   Pop $0
 !macroend
 
