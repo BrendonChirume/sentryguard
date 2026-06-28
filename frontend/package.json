@@ -55,11 +55,11 @@
       "target": [
         "nsis",
         "msi"
-      ],
-      "requestedExecutionLevel": "requireAdministrator"
+      ]
     },
     "nsis": {
       "oneClick": false,
+      "perMachine": true,
       "allowToChangeInstallationDirectory": true,
       "include": "build/installer.nsh",
       "deleteAppDataOnUninstall": true

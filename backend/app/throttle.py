@@ -34,6 +34,14 @@ class ThrottleManager:
     def unthrottle(self, rule_name: str) -> None:
         self._remove_if_exists(POLICY_PREFIX + rule_name)
 
+    def remove_all(self) -> None:
+        """Removes every QoS policy this app created, including ones orphaned
+        by a crash or kill — netsh advfirewall reset never touches these."""
+        self._powershell_query(
+            "Get-NetQosPolicy", "|", "Where-Object", f'{{$_.Name -like "{POLICY_PREFIX}*"}}',
+            "|", "Remove-NetQosPolicy", "-Confirm:$false",
+        )
+
     def is_throttled(self, rule_name: str) -> bool:
         policy_name = POLICY_PREFIX + rule_name
         result = self._powershell_query("Get-NetQosPolicy", "-Name", f'"{policy_name}"')

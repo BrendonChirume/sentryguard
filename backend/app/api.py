@@ -78,6 +78,7 @@ async def _network_loop() -> None:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    throttle.remove_all()  # sweep any QoS policies orphaned by a prior crash/kill
     monitor.start()
     policy_task = asyncio.create_task(_policy_loop())
     snapshot_task = asyncio.create_task(_snapshot_loop())
@@ -91,6 +92,7 @@ async def lifespan(app: FastAPI):
         network_task.cancel()
         pacing_task.cancel()
         monitor.stop()
+        throttle.remove_all()  # never leave a throttle policy active across shutdown
 
 
 app = FastAPI(title="SentryGuard", lifespan=lifespan)

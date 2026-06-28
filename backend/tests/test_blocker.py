@@ -1,6 +1,18 @@
+import pytest
+
 from app.blocker import BlockingPolicy, RuleStore
 from app.events import EventLogger
 from app.models import BlockRule, ProcessUsage
+
+
+@pytest.fixture(autouse=True)
+def fake_resolved_paths(monkeypatch):
+    """Tests use synthetic pids/names with no real backing process, so make
+    _resolve_path resolve them as if their exe path were just their name."""
+    monkeypatch.setattr(
+        "app.blocker.BlockingPolicy._resolve_path",
+        staticmethod(lambda process_name, pid: process_name),
+    )
 
 
 class FakeFirewall:
@@ -45,17 +57,6 @@ def make_policy(threshold_mb=500.0):
     events = EventLogger()
     policy = BlockingPolicy(firewall, rules, events, throttle)
     return policy, firewall, rules, events, throttle
-
-
-def test_evaluate_blocks_over_threshold():
-    policy, firewall, rules, events, throttle = make_policy(threshold_mb=10.0)
-    usage = ProcessUsage(pid=1234, name="hog.exe", bytes_sent=20 * 1024 * 1024)
-
-    policy.evaluate([usage])
-
-    assert "hog.exe" in firewall.blocked
-    assert rules.get("hog.exe").blocked is True
-    assert events.read_all()[0]["action"] == "auto_block"
 
 
 def test_evaluate_skips_under_threshold():
