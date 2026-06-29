@@ -34,7 +34,6 @@ def test_handle_packet_attributes_outbound_bytes(monkeypatch):
 def test_handle_packet_attributes_inbound_bytes(monkeypatch):
     monitor = NetworkMonitor()
     monitor._port_pid_map = {("udp", 6000): 7}
-    monitor._port_map_updated_at = float("inf")
 
     monkeypatch.setattr(
         "app.monitor.psutil.Process",
@@ -52,7 +51,6 @@ def test_handle_packet_attributes_inbound_bytes(monkeypatch):
 def test_handle_packet_unknown_port_is_ignored():
     monitor = NetworkMonitor()
     monitor._port_pid_map = {}
-    monitor._port_map_updated_at = float("inf")
 
     packet = FakePacket(src_port=9999, is_outbound=True)
     monitor._handle_packet(packet)
