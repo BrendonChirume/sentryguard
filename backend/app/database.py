@@ -7,10 +7,9 @@ from typing import Any
 
 from app.models import ActionType, BlockRule, Event
 
-# In production the backend runs as an elevated Scheduled Task and gets its
-# data dir via a --data-dir CLI arg (see app.main), since the install
-# directory usually isn't writable. Falls back to a cwd-relative "data" dir
-# for local dev/tests.
+# In production, Electron sets SENTRYGUARD_DATA_DIR to a writable per-user
+# directory (app.getPath('userData')) since the install directory usually
+# isn't writable. Falls back to a cwd-relative "data" dir for local dev/tests.
 DATA_DIR = Path(os.environ["SENTRYGUARD_DATA_DIR"]) if os.environ.get("SENTRYGUARD_DATA_DIR") else Path("data")
 DB_PATH = DATA_DIR / "sentryguard.db"
 
