@@ -35,26 +35,38 @@ _last_local_ip: str | None = None
 async def _policy_loop() -> None:
     while True:
         try:
-            poll_interval = float(db.get_setting("poll_interval") or 2.0)
+            poll_interval = float(await asyncio.to_thread(db.get_setting, "poll_interval") or 2.0)
         except ValueError:
             poll_interval = 2.0
 
         await asyncio.sleep(poll_interval)
-        policy.evaluate(monitor.snapshot(), _network_limiting_enabled, _current_network_id)
+        
+        def _do_evaluate():
+            policy.evaluate(monitor.snapshot(), _network_limiting_enabled, _current_network_id)
+        
+        await asyncio.to_thread(_do_evaluate)
 
 
 async def _pacing_loop() -> None:
     while True:
         await asyncio.sleep(PACING_INTERVAL_SECONDS)
-        policy.apply_target_pacing(monitor.snapshot(), _current_network_id)
+        
+        def _do_pace():
+            policy.apply_target_pacing(monitor.snapshot(), _current_network_id)
+            
+        await asyncio.to_thread(_do_pace)
 
 
 async def _snapshot_loop() -> None:
     while True:
         await asyncio.sleep(SNAPSHOT_INTERVAL_SECONDS)
         now = time.time()
-        for usage in monitor.snapshot():
-            db.log_snapshot(usage.name, usage.total_mb, now)
+        
+        def _log_all(usages, timestamp):
+            for usage in usages:
+                db.log_snapshot(usage.name, usage.total_mb, timestamp)
+                
+        await asyncio.to_thread(_log_all, monitor.snapshot(), now)
 
 
 async def _network_loop() -> None:
@@ -70,7 +82,7 @@ async def _network_loop() -> None:
             if network_id != _current_network_id:
                 _current_network_id = network_id
                 _current_network_name = name
-                decision = db.get_network_decision(network_id)
+                decision = await asyncio.to_thread(db.get_network_decision, network_id)
                 # Default to limiting ON while a brand-new network awaits the user's decision.
                 _network_limiting_enabled = decision["limit_enabled"] if decision else True
         await asyncio.sleep(NETWORK_CHECK_INTERVAL_SECONDS)
@@ -331,7 +343,7 @@ async def ws_usage(websocket: WebSocket) -> None:
             await websocket.send_json(_usage_payload())
             
             try:
-                poll = float(db.get_setting("poll_interval") or 2.0)
+                poll = float(await asyncio.to_thread(db.get_setting, "poll_interval") or 2.0)
             except ValueError:
                 poll = 2.0
                 

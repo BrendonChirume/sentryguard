@@ -37,24 +37,28 @@ class NetworkMonitor:
         self._lock = threading.Lock()
         self._stop_event = threading.Event()
         self._port_pid_map: dict[tuple[str, int], int] = {}
-        self._port_map_updated_at = 0.0
         self._hostname_cache: dict[str, str | None] = {}
 
     def start(self) -> None:
         self._stop_event.clear()
+        # Do one synchronous refresh before the capture thread starts, so the
+        # port map isn't empty for the first PORT_MAP_REFRESH_SECONDS.
+        self._refresh_port_map()
         self._thread = threading.Thread(target=self._run, daemon=True)
         self._thread.start()
+        self._port_map_thread = threading.Thread(target=self._port_map_loop, daemon=True)
+        self._port_map_thread.start()
 
     def stop(self) -> None:
         self._stop_event.set()
         self._thread.join(timeout=5)
+        self._port_map_thread.join(timeout=5)
 
     def snapshot(self) -> list[ProcessUsage]:
         with self._lock:
             return list(self._usage.values())
 
     def get_connections(self, process_name: str) -> list[dict]:
-        self._refresh_port_map_if_stale()
         conns = []
         for conn in psutil.net_connections(kind="inet"):
             if conn.pid is None:
@@ -117,8 +121,6 @@ class NetworkMonitor:
                 time.sleep(1)
 
     def _handle_packet(self, packet: pydivert.Packet) -> None:
-        self._refresh_port_map_if_stale()
-
         proto = "tcp" if packet.tcp else "udp" if packet.udp else None
         if proto is None:
             return
@@ -159,11 +161,17 @@ class NetworkMonitor:
             if usage is not None:
                 usage.description = description
 
-    def _refresh_port_map_if_stale(self) -> None:
-        now = time.monotonic()
-        if now - self._port_map_updated_at < PORT_MAP_REFRESH_SECONDS:
-            return
+    def _port_map_loop(self) -> None:
+        # psutil.net_connections() on Windows can take tens to hundreds of ms.
+        # Running it inline in _handle_packet (the WinDivert hot path) would
+        # stall w.send() for every in-flight packet system-wide while it
+        # runs, causing latency spikes every refresh interval — so it's
+        # refreshed here on its own thread instead, same as _description_executor.
+        while not self._stop_event.is_set():
+            self._refresh_port_map()
+            self._stop_event.wait(PORT_MAP_REFRESH_SECONDS)
 
+    def _refresh_port_map(self) -> None:
         new_map: dict[tuple[str, int], int] = {}
         try:
             connections = psutil.net_connections(kind="inet")
@@ -178,4 +186,3 @@ class NetworkMonitor:
             new_map[(proto, conn.laddr.port)] = conn.pid
 
         self._port_pid_map = new_map
-        self._port_map_updated_at = now

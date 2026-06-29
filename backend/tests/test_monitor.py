@@ -16,7 +16,6 @@ class FakePacket:
 def test_handle_packet_attributes_outbound_bytes(monkeypatch):
     monitor = NetworkMonitor()
     monitor._port_pid_map = {("tcp", 5000): 42}
-    monitor._port_map_updated_at = float("inf")  # skip refresh
 
     monkeypatch.setattr(
         "app.monitor.psutil.Process",
