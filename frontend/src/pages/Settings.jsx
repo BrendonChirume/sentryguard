@@ -55,6 +55,62 @@ const STATUS_LABEL = {
   error: "Couldn't check for updates",
 };
 
+const REPO_URL = "https://github.com/BrendonChirume/sentryguard";
+
+function AboutSection() {
+  const [version, setVersion] = useState(null);
+
+  useEffect(() => {
+    window.sentryguard?.getAppVersion?.().then(setVersion).catch(() => {});
+  }, []);
+
+  const openLink = (url) => (e) => {
+    e.preventDefault();
+    window.sentryguard?.openExternal?.(url);
+  };
+
+  return (
+    <div className={`${card} px-5 py-4.5`}>
+      <div className="flex items-center gap-3">
+        <img src={logoMark} alt="" className="w-10 h-10 flex-shrink-0" />
+        <div>
+          <div className="text-sm font-semibold text-[color:var(--c-text-1)]">SentryGuard</div>
+          <div className="text-xs text-[color:var(--c-text-3)] mt-0.5">Monitor. Control. Protect your bandwidth.</div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 mt-4 pt-4 border-t border-[var(--c-border-10)]">
+        <div>
+          <div className="text-[11px] text-[color:var(--c-text-3)]">Version</div>
+          <div className="text-[13px] text-[color:var(--c-text-1)] font-mono mt-0.5">{version || "—"}</div>
+        </div>
+        <div>
+          <div className="text-[11px] text-[color:var(--c-text-3)]">Platform</div>
+          <div className="text-[13px] text-[color:var(--c-text-1)] mt-0.5">Windows</div>
+        </div>
+      </div>
+
+      <p className="text-[13px] text-[color:var(--c-text-2)] leading-relaxed mt-4 pt-4 border-t border-[var(--c-border-10)]">
+        SentryGuard tracks per-process network usage, auto-limits apps that exceed your data thresholds,
+        and lets you manually block or throttle traffic through the Windows Firewall.
+      </p>
+
+      <div className="flex items-center gap-4 mt-4 pt-4 border-t border-[var(--c-border-10)]">
+        <a href={REPO_URL} onClick={openLink(REPO_URL)} className="text-[13px] text-blue-400 hover:underline cursor-pointer">
+          Source on GitHub
+        </a>
+        <a href={`${REPO_URL}/issues`} onClick={openLink(`${REPO_URL}/issues`)} className="text-[13px] text-blue-400 hover:underline cursor-pointer">
+          Report an Issue
+        </a>
+      </div>
+
+      <div className="text-[11px] text-[color:var(--c-text-3)] mt-4 pt-4 border-t border-[var(--c-border-10)]">
+        © {new Date().getFullYear()} Brendon Chirume. All rights reserved.
+      </div>
+    </div>
+  );
+}
+
 function UpdatesSection() {
   const [version, setVersion] = useState(null);
   const [update, setUpdate] = useState(null);
@@ -245,15 +301,7 @@ export default function Settings({ settings, onUpdate, networkStatus }) {
 
           {category === "updates" && <UpdatesSection />}
 
-          {category === "about" && (
-            <div className="flex items-center gap-3 px-1 py-3 mt-1">
-              <img src={logoMark} alt="" className="w-8 h-8 flex-shrink-0 opacity-80" />
-              <div>
-                <div className="text-[13px] font-semibold text-[color:var(--c-text-2)]">SentryGuard</div>
-                <div className="text-[11px] text-[color:var(--c-text-3)]">Monitor. Control. Protect your bandwidth.</div>
-              </div>
-            </div>
-          )}
+          {category === "about" && <AboutSection />}
 
         </div>
       </div>

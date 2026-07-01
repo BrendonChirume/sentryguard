@@ -1,4 +1,4 @@
-import { app, BrowserWindow, session, Tray, Menu, Notification, nativeImage, ipcMain } from "electron";
+import { app, BrowserWindow, session, Tray, Menu, Notification, nativeImage, ipcMain, shell } from "electron";
 import electronUpdater from "electron-updater";
 const { autoUpdater } = electronUpdater;
 import { spawn } from "node:child_process";
@@ -268,6 +268,11 @@ ipcMain.on("window-close", () => {
 });
 
 ipcMain.handle("get-app-version", () => app.getVersion());
+
+ipcMain.handle("open-external", (_event, url) => {
+  if (typeof url !== "string" || !/^https:\/\//i.test(url)) return;
+  shell.openExternal(url);
+});
 
 ipcMain.handle("check-for-updates", async () => {
   if (isDev) {
