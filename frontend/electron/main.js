@@ -140,8 +140,16 @@ function createTray() {
   tray.on("click", showWindow);
 }
 
+let pendingCheckResolvers = [];
+
 function sendUpdateStatus(status, extra = {}) {
-  mainWindow?.webContents.send("update-status", { status, ...extra });
+  const payload = { status, ...extra };
+  mainWindow?.webContents.send("update-status", payload);
+  if (status !== "checking" && status !== "downloading") {
+    const resolvers = pendingCheckResolvers;
+    pendingCheckResolvers = [];
+    resolvers.forEach((resolve) => resolve(payload));
+  }
 }
 
 function setupAutoUpdate() {
@@ -279,9 +287,11 @@ ipcMain.handle("check-for-updates", async () => {
     return { status: "not-available", devMode: true };
   }
   try {
-    const result = await autoUpdater.checkForUpdates();
-    return { status: "checking", version: result?.updateInfo?.version };
+    const resultPromise = new Promise((resolve) => pendingCheckResolvers.push(resolve));
+    await autoUpdater.checkForUpdates();
+    return await resultPromise;
   } catch (err) {
+    pendingCheckResolvers = [];
     return { status: "error", message: err.message || String(err) };
   }
 });

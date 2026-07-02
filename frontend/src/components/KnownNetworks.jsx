@@ -22,7 +22,7 @@ export default function KnownNetworks({ currentNetworkId }) {
       <div className="flex items-center justify-between mb-1">
         <div className="text-sm font-medium text-[color:var(--c-text-1)]">Known Networks</div>
       </div>
-      <div className="text-xs text-[color:var(--c-text-3)] mb-3">Remembered limiting choices, so you're not asked again on the same network</div>
+      <div className="text-xs text-[color:var(--c-text-3)] mb-3">Remembered monitoring choices, so you're not asked again on the same network</div>
 
       {networks.length === 0 && <div className="text-xs text-[color:var(--c-text-3)] py-2">No networks remembered yet.</div>}
 

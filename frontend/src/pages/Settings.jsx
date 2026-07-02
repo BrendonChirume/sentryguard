@@ -153,6 +153,7 @@ function UpdatesSection() {
       {update && (
         <div className="text-xs text-[color:var(--c-text-3)] mt-3 pt-3 border-t border-[var(--c-border-10)]">
           {STATUS_LABEL[update.status] || update.status}
+          {update.status === "not-available" && version ? ` (${version} is the latest)` : ""}
           {update.version && update.status !== "not-available" ? ` (${update.version})` : ""}
           {update.devMode && " — disabled in dev mode"}
           {update.status === "downloading" && update.percent != null ? ` · ${Math.round(update.percent)}%` : ""}

@@ -17,9 +17,9 @@ export default function NetworkPromptModal({ isOpen, networkName, onDecide, onDi
       </div>
       <div className="flex gap-2.5">
         <button className={`${btnGhost} flex-1`} onClick={() => onDecide(false)}>Keep Open</button>
-        <button className={`${btnPrimary} flex-1`} onClick={() => onDecide(true)}>Limit Data</button>
+        <button className={`${btnPrimary} flex-1`} onClick={() => onDecide(true)}>Monitor Data</button>
       </div>
-      <div className="text-[11px] text-[color:var(--c-text-3)] mt-3">This choice is remembered for this network, so you won't be asked again.</div>
+      <div className="text-[11px] text-[color:var(--c-text-3)] mt-3">This choice is saved for this network until you change it manually.</div>
     </Modal>
   );
 }
